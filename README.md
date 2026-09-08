@@ -18,8 +18,6 @@ O BRABIM não pretende começar tentando reproduzir todas as funcionalidades das
 
 **Problema → Validação → Solução → Protótipo → Usuário → MVP → Receita → Expansão**
 
-## Documentação
-
 ## Protótipo web
 
 O [protótipo de edição de paredes](https://brabim-prototipo.godoy13.chatgpt.site) permite selecionar paredes, editar altura e espessura e conferir planta e 3D. Acesso inicialmente privado ao proprietário. Veja [execução local e limites](prototipo/README.md). As alterações do modelo duram apenas a sessão.

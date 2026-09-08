@@ -5,6 +5,7 @@ Evidências coletadas na Fase Zero para identificar problemas antes de definir o
 - [Matriz de problemas](matriz-de-problemas.md): consolidação e comparação entre profissionais.
 - [Entrevista 001 — Bruno Porto](entrevistas/entrevista-001-bruno-porto.md): relato consolidado, hipóteses e perguntas de aprofundamento.
 - [Entrevista 002 — Paulo](entrevistas/entrevista-002-paulo.md): transcrição da captura, contraponto sobre complexidade e sugestões a aprofundar.
+- [Desafios no Revit — fontes externas](fontes-externas/desafios-revit.md): hipóteses recebidas, links e limites da verificação; não contabilizadas como entrevistas.
 
 ## Como atualizar
 

@@ -23,6 +23,8 @@ Um problema só será tratado como recorrente quando aparecer de forma independe
 
 ## Próximo passo
 
+O [levantamento externo sobre desafios no Revit](fontes-externas/desafios-revit.md) reúne cinco temas adicionais para investigação e relaciona E2 a D3/D10 e E5 a D1. Esses vínculos são temáticos e não alteram as marcações das entrevistas nem comprovam recorrência.
+
 Preencher as colunas dos demais profissionais sem alterar o conteúdo original de suas respostas.
 
 ## Fonte e critérios de análise
