@@ -18,7 +18,7 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 | Interface | Referência visual familiar ao Revit, com identidade própria e fluxos simplificados |
 | Protótipo | Web publicado, inicialmente privado ao proprietário |
 | Geometria atual | Blocos independentes; encontros ainda apresentam sobreposições e sobras |
-| IfcOpenShell | Integração autorizada; pacote 0.8.5 preparado localmente, sem integração ou teste funcional concluído |
+| IfcOpenShell | Versão 0.8.5 executada: três cenários geométricos passaram; integração à interface pendente |
 | MVP comercial | Não definido |
 | Plataforma final | Web, desktop ou híbrida ainda em avaliação |
 | Custos | Sem benchmark ou orçamento mensal calculado |
@@ -33,8 +33,8 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 
 ## Próximas entregas
 
-1. Executar o motor com as cinco paredes de exemplo e relações de conexão explícitas.
-2. Conferir junções e identidade dos elementos com testes geométricos.
+1. Revisar os [IFCs e resultados dos primeiros testes](../../experiments/ifcopenshell/README.md), já gerados com conexões explícitas.
+2. Ampliar a validação de junções para outros ângulos e edição sequencial de parâmetros.
 3. Medir processamento e consumo de memória.
 4. Conectar a geometria calculada à planta e ao 3D; testar edição e falhas de comunicação.
 5. Definir infraestrutura e acesso de Paulo e Diego antes de testes compartilhados.

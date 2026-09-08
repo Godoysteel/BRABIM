@@ -1,12 +1,16 @@
 # Integração do IfcOpenShell
 
-**Data:** 08/09/2026. **Status:** autorizada, preparação local iniciada; integração não concluída.
+**Data:** 08/09/2026. **Status:** teste geométrico inicial executado; integração à interface não concluída.
+
+## Resultado do primeiro experimento
+
+Três cenários passaram nas oito verificações automatizadas de cada caso: modelo original, espessuras diferentes e alturas diferentes. Foram gerados IFCs e malhas; veja [procedimento, resultados e limites](../../experiments/ifcopenshell/README.md). Memória, edição sequencial de parâmetros e revisão profissional continuam pendentes. O protótipo publicado não mudou.
 
 ## Objetivo
 
 Reutilizar a geração de geometria e encontros do IfcOpenShell no BRABIM. O usuário permanece na interface do BRABIM; não precisa abrir Revit ou Blender. A biblioteca é uma dependência técnica incorporada à solução.
 
-O pacote 0.8.5 foi preparado em `.runtime/python`, fora do versionamento. A presença do pacote foi conferida por seus metadados; não representa comprovação de execução, junções ou integração com a viewport.
+O pacote 0.8.5 está em `.runtime/python`, fora do versionamento. Sua execução foi comprovada pelo experimento; isso não representa integração com a viewport nem validação abrangente de junções.
 
 ## Arquitetura a experimentar
 
@@ -29,7 +33,7 @@ Em uma futura edição desktop, o motor poderá ser empacotado localmente. Para 
 | Edição repetida | Planta e 3D representam a mesma revisão |
 | Falha do motor | Mensagem clara e último resultado identificado como anterior |
 
-Medir duração, memória e tamanho das respostas; não há medições concluídas. Diego poderá conferir os casos e Paulo revisar critérios técnicos, conforme divisão proposta.
+O experimento registra duração por cenário. Medições de memória, tamanho das respostas de serviço e benchmark repetido permanecem pendentes. Diego poderá conferir os casos e Paulo revisar critérios técnicos, conforme divisão proposta.
 
 ## Custos e atualizações
 
