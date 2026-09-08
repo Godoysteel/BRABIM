@@ -3,8 +3,8 @@
 ## Informações confirmadas pelo idealizador
 
 - Paulo será parceiro no desenvolvimento do BRABIM.
-- Diego é o engenheiro que trabalha com Paulo e se dedicará ao desenvolvimento do projeto.
-- Diego não tem experiência com programação, conforme esclarecimento do idealizador. Sua participação inicial pode se apoiar na experiência de engenharia.
+- Diego é o engenheiro e se dedicará ao desenvolvimento do projeto.
+- Diego entra para apoiar na experiência de engenharia.
 
 ## Divisão inicial proposta
 
