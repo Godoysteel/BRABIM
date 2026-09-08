@@ -1,0 +1,42 @@
+# Estado consolidado do BRABIM
+
+**Atualizado em:** 08/09/2026. Este registro consolida a conversa com o idealizador; as entrevistas originais permanecem preservadas.
+
+## Visão confirmada
+
+Simplificar o trabalho do usuário, compartilhando a visão do Esboce. O BRABIM mantém identidade e evolução independentes. O usuário deve informar o necessário, compreender os resultados e poder conferi-los. Padrões úteis, automação e ferramentas contextuais devem reduzir etapas sem retirar controle técnico.
+
+Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código: seu repositório ainda não foi inspecionado nesta tarefa.
+
+## Situação das entregas
+
+| Item | Estado |
+|---|---|
+| Repositório | GitHub privado: [Godoysteel/BRABIM](https://github.com/Godoysteel/BRABIM), branch main |
+| Pesquisa | Relatos de Bruno e Paulo; dez itens na matriz, sem validação de recorrência geral |
+| Equipe | Paulo será parceiro; Diego participará e não tem experiência com programação |
+| Interface | Referência visual familiar ao Revit, com identidade própria e fluxos simplificados |
+| Protótipo | Web publicado, inicialmente privado ao proprietário |
+| Geometria atual | Blocos independentes; encontros ainda apresentam sobreposições e sobras |
+| IfcOpenShell | Integração autorizada; pacote 0.8.5 preparado localmente, sem integração ou teste funcional concluído |
+| MVP comercial | Não definido |
+| Plataforma final | Web, desktop ou híbrida ainda em avaliação |
+| Custos | Sem benchmark ou orçamento mensal calculado |
+
+## Navegação
+
+- [Equipe e responsabilidades](equipe.md)
+- [Forma de trabalho proposta](forma-de-trabalho.md)
+- [Escopo do protótipo](../02-produto/prototipo.md)
+- [Plano de integração do IfcOpenShell](../03-arquitetura/integracao-ifcopenshell.md)
+- [Decisões registradas](../04-decisoes/README.md)
+
+## Próximas entregas
+
+1. Executar o motor com as cinco paredes de exemplo e relações de conexão explícitas.
+2. Conferir junções e identidade dos elementos com testes geométricos.
+3. Medir processamento e consumo de memória.
+4. Conectar a geometria calculada à planta e ao 3D; testar edição e falhas de comunicação.
+5. Definir infraestrutura e acesso de Paulo e Diego antes de testes compartilhados.
+
+Não há prazo, orçamento, contas de colaboradores ou compromissos individuais confirmados.

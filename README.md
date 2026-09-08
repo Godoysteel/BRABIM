@@ -24,6 +24,9 @@ O [protótipo de edição de paredes](https://brabim-prototipo.godoy13.chatgpt.s
 
 ## Documentação do projeto
 
+- [Estado consolidado](docs/00-visao/estado-do-projeto.md) — decisões, entregas, pendências e próximos passos
+- [Forma de trabalho](docs/00-visao/forma-de-trabalho.md) — proposta de comunicação e colaboração
+
 - [Documento mestre](docs/00-visao/documento-mestre.md) — visão e princípios do projeto
 - [Equipe e responsabilidades](docs/00-visao/equipe.md) — participantes e divisão inicial proposta
 - [Pesquisa](docs/01-pesquisa/README.md) — entrevistas e evidências de mercado

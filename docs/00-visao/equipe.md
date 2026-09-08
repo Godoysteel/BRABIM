@@ -12,7 +12,7 @@ Esta divisão foi sugerida na discussão do projeto e ainda precisa ser alinhada
 
 | Participante | Responsabilidade proposta | Entregas |
 |---|---|---|
-| Idealizador | Produto e desenvolvimento do software | Prioridades, protótipos e implementação |
+| Idealizador | Visão de simplicidade, experiência do usuário, produto e desenvolvimento | Fluxos simplificados, prioridades, protótipos e implementação |
 | Paulo | Direção técnica de engenharia | Seleção de problemas reais e revisão dos critérios técnicos |
 | Diego | Documentação dos processos e validação funcional | Exemplos reais, dados de entrada, resultados esperados e relatos de falhas |
 

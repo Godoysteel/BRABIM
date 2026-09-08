@@ -6,6 +6,8 @@
 **Status:** Documento inicial de concepção  
 **Nome:** BRABIM — codinome provisório
 
+> Documento de concepção de 07/09/2026 preservado como referência. Para as decisões e entregas posteriores, consulte o [estado consolidado em 08/09/2026](estado-do-projeto.md).
+
 ## 1. Visão
 
 O BRABIM é um projeto para criação de um software BIM profissional com foco em **simplicidade, produtividade, acessibilidade e interoperabilidade**.
@@ -197,7 +199,7 @@ Precisamos conseguir completar:
 14. Quais componentes open source são adequados?
 15. Qual modelo de cobrança reduz a barreira de entrada?
 
-## 24. Estado atual
+## 24. Estado na concepção — 07/09/2026
 
 - **Fase:** Zero — Descoberta
 - **Código:** ainda não necessário
