@@ -5,7 +5,7 @@ O editor permite criar de um a oito cômodos retangulares alinhados lado a lado.
 ## Uso
 
 1. Adicione um cômodo à direita e selecione seu nome na lista ou na planta.
-2. Altere nome, largura, porta externa e janela; confirme medidas com Enter.
+2. Altere nome, largura, porta externa e janela pelos campos, ou arraste a porta e a janela diretamente na planta para reposicioná-las ao longo da própria parede; confirme medidas com Enter.
 3. Profundidade, altura, espessura de parede e piso são comuns a todos os cômodos.
 4. Confira a parede compartilhada e a porta central entre os ambientes na planta e no 3D.
 5. Salve no navegador ou exporte o projeto em JSON para compartilhar. Abrir arquivo e reabrir salvo substituem o modelo atual; Desfazer recupera o anterior.
@@ -20,7 +20,7 @@ Cada divisória tem uma identificação única e pertence aos dois ambientes adj
 
 ## Limites
 
-Ainda não há planta livre, cômodos em L, pavimentos, telhado, fundação, cálculo estrutural ou exportação IFC do modelo editado. Cada cômodo mantém uma porta externa ao sul e janela ao norte. Portas de ligação têm posição central fixa. A planta representa um corte a 1,20 m.
+Ainda não há planta livre, cômodos em L, pavimentos, telhado, fundação, cálculo estrutural ou exportação IFC do modelo editado. Cada cômodo mantém uma porta externa ao sul e janela ao norte — a posição ao longo dessa parede é livre (arraste ou campo numérico), mas a parede em si ainda não pode ser escolhida. Portas de ligação têm posição central fixa. A planta representa um corte a 1,20 m.
 
 A geometria reaproveita as primitivas Three.js e a implementação retangular existente. Esta composição restrita não substitui um motor BIM de junções genéricas. O IfcOpenShell permanece nos ensaios separados: o GitHub Pages não executa Python nem recalcula IFC.
 
