@@ -23,3 +23,8 @@ Documentação consultada: https://threejs.org/manual/en/installation.html e htt
 ## Validação
 
 O suporte WebMCP é opcional e oferece seleção de parede existente. Não houve contexto WebMCP disponível para verificar o contrato em execução. Não foram solicitados testes de interface no navegador; a validação inclui compilação, tipos e resposta HTTP local.
+
+## GitHub Pages
+
+Publicação pública: https://godoysteel.github.io/BRABIM/ (editor) e https://godoysteel.github.io/BRABIM/ensaios/ (resultados IFC). O comando npm run build:pages gera arquivos estáticos em dist-pages. O workflow pages.yml publica automaticamente alterações no protótipo na branch main. Não executa o motor Python online.
+

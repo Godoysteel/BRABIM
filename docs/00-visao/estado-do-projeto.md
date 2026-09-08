@@ -12,11 +12,11 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 
 | Item | Estado |
 |---|---|
-| Repositório | GitHub privado: [Godoysteel/BRABIM](https://github.com/Godoysteel/BRABIM), branch main |
+| Repositório | GitHub público: [Godoysteel/BRABIM](https://github.com/Godoysteel/BRABIM), branch main |
 | Pesquisa | Relatos de Bruno e Paulo; dez itens na matriz, sem validação de recorrência geral |
 | Equipe | Paulo será parceiro; Diego se dedicará ao projeto, contribuindo com sua experiência de engenharia |
 | Interface | Referência visual familiar ao Revit, com identidade própria e fluxos simplificados |
-| Protótipo | Web publicado, inicialmente privado ao proprietário |
+| Protótipo | Web público no GitHub Pages |
 | Geometria atual | Blocos independentes; encontros ainda apresentam sobreposições e sobras |
 | IfcOpenShell | Versão 0.8.5 executada: três cenários passaram e suas malhas estão disponíveis na tela de ensaios; recálculo online pendente |
 | MVP comercial | Não definido |
@@ -37,6 +37,7 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 2. Ampliar a validação de junções para outros ângulos e edição sequencial de parâmetros.
 3. Medir processamento e consumo de memória.
 4. Conectar a geometria calculada à planta e ao 3D; testar edição e falhas de comunicação.
-5. Definir infraestrutura e acesso de Paulo e Diego antes de testes compartilhados.
+5. Definir infraestrutura do motor; Paulo e Diego podem testar o protótipo público pelo link.
 
 Não há prazo, orçamento, contas de colaboradores ou compromissos individuais confirmados.
+
