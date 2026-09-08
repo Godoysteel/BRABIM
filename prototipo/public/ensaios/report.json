@@ -1,0 +1,307 @@
+{
+  "ifcopenshell": "0.8.5",
+  "cases": [
+    {
+      "case": "baseline",
+      "checks": {
+        "five_walls": true,
+        "six_connections": true,
+        "valid_footprints": true,
+        "no_plan_overlap": true,
+        "joined_contacts": true,
+        "heights_preserved": true,
+        "stable_regeneration": true,
+        "ids_preserved": true
+      },
+      "passed": true,
+      "elapsed_seconds": 0.567,
+      "overlaps": [
+        {
+          "a": "P01",
+          "b": "P02",
+          "area": 0.0
+        },
+        {
+          "a": "P01",
+          "b": "P03",
+          "area": 0.0
+        },
+        {
+          "a": "P01",
+          "b": "P04",
+          "area": 4.44089209850063e-17
+        },
+        {
+          "a": "P01",
+          "b": "P05",
+          "area": 0.0
+        },
+        {
+          "a": "P02",
+          "b": "P03",
+          "area": 2.168404344971009e-17
+        },
+        {
+          "a": "P02",
+          "b": "P04",
+          "area": 5.9211894646675e-17
+        },
+        {
+          "a": "P02",
+          "b": "P05",
+          "area": 6.661338147750935e-17
+        },
+        {
+          "a": "P03",
+          "b": "P04",
+          "area": 0.0
+        },
+        {
+          "a": "P03",
+          "b": "P05",
+          "area": 0.0
+        },
+        {
+          "a": "P04",
+          "b": "P05",
+          "area": 0.0
+        }
+      ],
+      "gaps": [
+        {
+          "a": "P01",
+          "b": "P03",
+          "distance": 0.0
+        },
+        {
+          "a": "P01",
+          "b": "P04",
+          "distance": 0.0
+        },
+        {
+          "a": "P02",
+          "b": "P03",
+          "distance": 0.0
+        },
+        {
+          "a": "P02",
+          "b": "P04",
+          "distance": 0.0
+        },
+        {
+          "a": "P01",
+          "b": "P05",
+          "distance": 0.0
+        },
+        {
+          "a": "P02",
+          "b": "P05",
+          "distance": 0.0
+        }
+      ]
+    },
+    {
+      "case": "different-thickness",
+      "checks": {
+        "five_walls": true,
+        "six_connections": true,
+        "valid_footprints": true,
+        "no_plan_overlap": true,
+        "joined_contacts": true,
+        "heights_preserved": true,
+        "stable_regeneration": true,
+        "ids_preserved": true
+      },
+      "passed": true,
+      "elapsed_seconds": 0.08,
+      "overlaps": [
+        {
+          "a": "P01",
+          "b": "P02",
+          "area": 0.0
+        },
+        {
+          "a": "P01",
+          "b": "P03",
+          "area": 0.0
+        },
+        {
+          "a": "P01",
+          "b": "P04",
+          "area": 0.0
+        },
+        {
+          "a": "P01",
+          "b": "P05",
+          "area": 0.0
+        },
+        {
+          "a": "P02",
+          "b": "P03",
+          "area": 2.7755575615628914e-17
+        },
+        {
+          "a": "P02",
+          "b": "P04",
+          "area": 7.13714801544741e-18
+        },
+        {
+          "a": "P02",
+          "b": "P05",
+          "area": 4.44089209850063e-17
+        },
+        {
+          "a": "P03",
+          "b": "P04",
+          "area": 0.0
+        },
+        {
+          "a": "P03",
+          "b": "P05",
+          "area": 0.0
+        },
+        {
+          "a": "P04",
+          "b": "P05",
+          "area": 0.0
+        }
+      ],
+      "gaps": [
+        {
+          "a": "P01",
+          "b": "P03",
+          "distance": 0.0
+        },
+        {
+          "a": "P01",
+          "b": "P04",
+          "distance": 0.0
+        },
+        {
+          "a": "P02",
+          "b": "P03",
+          "distance": 0.0
+        },
+        {
+          "a": "P02",
+          "b": "P04",
+          "distance": 0.0
+        },
+        {
+          "a": "P01",
+          "b": "P05",
+          "distance": 0.0
+        },
+        {
+          "a": "P02",
+          "b": "P05",
+          "distance": 0.0
+        }
+      ]
+    },
+    {
+      "case": "different-height",
+      "checks": {
+        "five_walls": true,
+        "six_connections": true,
+        "valid_footprints": true,
+        "no_plan_overlap": true,
+        "joined_contacts": true,
+        "heights_preserved": true,
+        "stable_regeneration": true,
+        "ids_preserved": true
+      },
+      "passed": true,
+      "elapsed_seconds": 0.078,
+      "overlaps": [
+        {
+          "a": "P01",
+          "b": "P02",
+          "area": 0.0
+        },
+        {
+          "a": "P01",
+          "b": "P03",
+          "area": 0.0
+        },
+        {
+          "a": "P01",
+          "b": "P04",
+          "area": 4.44089209850063e-17
+        },
+        {
+          "a": "P01",
+          "b": "P05",
+          "area": 0.0
+        },
+        {
+          "a": "P02",
+          "b": "P03",
+          "area": 2.168404344971009e-17
+        },
+        {
+          "a": "P02",
+          "b": "P04",
+          "area": 5.9211894646675e-17
+        },
+        {
+          "a": "P02",
+          "b": "P05",
+          "area": 6.661338147750935e-17
+        },
+        {
+          "a": "P03",
+          "b": "P04",
+          "area": 0.0
+        },
+        {
+          "a": "P03",
+          "b": "P05",
+          "area": 0.0
+        },
+        {
+          "a": "P04",
+          "b": "P05",
+          "area": 0.0
+        }
+      ],
+      "gaps": [
+        {
+          "a": "P01",
+          "b": "P03",
+          "distance": 0.0
+        },
+        {
+          "a": "P01",
+          "b": "P04",
+          "distance": 0.0
+        },
+        {
+          "a": "P02",
+          "b": "P03",
+          "distance": 0.0
+        },
+        {
+          "a": "P02",
+          "b": "P04",
+          "distance": 0.0
+        },
+        {
+          "a": "P01",
+          "b": "P05",
+          "distance": 0.0
+        },
+        {
+          "a": "P02",
+          "b": "P05",
+          "distance": 0.0
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Projected overlap checks cover these vertical extrusions only.",
+    "No sloped walls, layers with different materials, openings or arbitrary angles tested.",
+    "Memory not measured. Time includes IFC generation, meshing and serialization; not a production benchmark."
+  ]
+}
