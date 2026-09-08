@@ -1,0 +1,5 @@
+'use client';
+import {useEffect} from 'react';
+import {flushSync} from 'react-dom';
+type Context={registerTool:(tool:{name:string;description:string;inputSchema:object;annotations:{readOnlyHint:boolean};execute:(input:unknown)=>unknown},options:{signal:AbortSignal})=>void|Promise<void>};
+export function useWallTool(ids:string[],select:(id:string)=>void){useEffect(()=>{const context=(document as Document & {modelContext?:Context}).modelContext;if(!context)return;const lifecycle=new AbortController();try{Promise.resolve(context.registerTool({name:'select_wall',description:'Seleciona uma parede existente e abre suas propriedades nas vistas do BRABIM.',inputSchema:{type:'object',properties:{id:{type:'string',enum:ids}},required:['id'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){const id=(input as {id?:unknown})?.id;if(typeof id!=='string'||!ids.includes(id))throw new Error('Parede inexistente');flushSync(()=>select(id));return {selectedWall:id};}},{signal:lifecycle.signal})).catch(()=>{});}catch{}return()=>lifecycle.abort();},[ids,select]);}
