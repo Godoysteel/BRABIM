@@ -1,0 +1,99 @@
+{
+  "pyodideLoadMs": 1640,
+  "wheelInstallMs": 3246,
+  "wheelInstalled": true,
+  "wheelError": null,
+  "executionMs": 41565,
+  "pythonResult": {
+    "ifcopenshell_version": "0.0.0",
+    "wall_count": 5,
+    "connection_count": 6,
+    "meshes": [
+      {
+        "id": "P01",
+        "guid": "38Y1$9sfD5L8MC4r_AdBWV",
+        "vertex_count": 8,
+        "face_count": 12,
+        "height": 2.8,
+        "bbox_min": [
+          -4.1,
+          -2.6,
+          0
+        ],
+        "bbox_max": [
+          4.1,
+          -2.4,
+          2.8
+        ]
+      },
+      {
+        "id": "P02",
+        "guid": "3Al2O5eMj6xA812uxlIu7h",
+        "vertex_count": 8,
+        "face_count": 12,
+        "height": 2.8,
+        "bbox_min": [
+          -4.1,
+          2.4,
+          0
+        ],
+        "bbox_max": [
+          4.1,
+          2.6,
+          2.8
+        ]
+      },
+      {
+        "id": "P03",
+        "guid": "15XpoxvzD5Oezf04XC3IUD",
+        "vertex_count": 8,
+        "face_count": 12,
+        "height": 2.8,
+        "bbox_min": [
+          -4.1,
+          -2.6,
+          0
+        ],
+        "bbox_max": [
+          -3.9,
+          2.5999999999999996,
+          2.8
+        ]
+      },
+      {
+        "id": "P04",
+        "guid": "2emZIu1S9FOP8UOm2gzhR6",
+        "vertex_count": 8,
+        "face_count": 12,
+        "height": 2.8,
+        "bbox_min": [
+          3.9,
+          -2.6,
+          0
+        ],
+        "bbox_max": [
+          4.1,
+          2.5999999999999996,
+          2.8
+        ]
+      },
+      {
+        "id": "P05",
+        "guid": "3RRnI9oVP4UxtE2T28i9Vc",
+        "vertex_count": 8,
+        "face_count": 12,
+        "height": 2.8,
+        "bbox_min": [
+          0.925,
+          -2.4,
+          0
+        ],
+        "bbox_max": [
+          1.075,
+          2.4000000000000004,
+          2.8
+        ]
+      }
+    ]
+  }
+}

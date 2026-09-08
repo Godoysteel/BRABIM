@@ -20,6 +20,8 @@ O adaptador deve isolar a aplicação das particularidades da API, conservar ide
 
 Para a primeira prova, gerar um arquivo e a geometria separadamente. Em seguida, avaliar um serviço Python para processamento dinâmico. A hospedagem atual da interface não está configurada para esse motor Python; não assumir que basta instalar o pacote no frontend.
 
+Rodar o IfcOpenShell no próprio navegador via WASM foi testado e descartado para recálculo em tempo real: o cálculo da mesma cena de cinco paredes levou de 27 a 53 segundos em WASM, contra menos de 1 segundo nativo — ver [experimento](../../experiments/ifcopenshell-wasm/README.md) e [decisão 0004](../04-decisoes/0004-wasm-nao-viavel-tempo-real.md). Isso reforça a necessidade de um serviço Python nativo para edição ao vivo.
+
 Em uma futura edição desktop, o motor poderá ser empacotado localmente. Para a opção web com servidor, haverá comunicação de rede. Nenhuma dessas opções foi definida como plataforma final.
 
 ## Validação prevista

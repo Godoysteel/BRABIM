@@ -1,0 +1,12 @@
+{
+  "name": "ifcopenshell-wasm",
+  "private": true,
+  "type": "module",
+  "description": "Teste de viabilidade: IfcOpenShell 0.8.5 via WASM/Pyodide, sem servidor.",
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "dependencies": {
+    "pyodide": "0.28.3"
+  }
+}
