@@ -25,6 +25,8 @@ jobs:
         working-directory: prototipo
       - run: node --experimental-strip-types scripts/test-room.mjs
         working-directory: prototipo
+      - run: node --experimental-strip-types scripts/test-house.mjs
+        working-directory: prototipo
       - uses: actions/upload-pages-artifact@v3
         with:
           path: prototipo/dist-pages
@@ -41,3 +43,4 @@ jobs:
       - name: Publicar
         id: deployment
         uses: actions/deploy-pages@v4
+

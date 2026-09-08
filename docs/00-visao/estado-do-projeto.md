@@ -17,7 +17,7 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 | Equipe | Paulo será parceiro; Diego se dedicará ao projeto, contribuindo com sua experiência de engenharia |
 | Interface | Referência visual familiar ao Revit, com identidade própria e fluxos simplificados |
 | Protótipo | Web público no GitHub Pages |
-| Geometria atual | Blocos independentes; encontros ainda apresentam sobreposições e sobras |
+| Geometria atual | Cômodos retangulares alinhados, divisórias únicas e portas de ligação; geometria demonstrativa sem recálculo IFC |
 | IfcOpenShell | Versão 0.8.5 executada: três cenários passaram e suas malhas estão disponíveis na tela de ensaios; recálculo online pendente |
 | MVP comercial | Não definido |
 | Plataforma final | Web, desktop ou híbrida ainda em avaliação |
@@ -40,4 +40,9 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 5. Definir infraestrutura do motor; Paulo e Diego podem testar o protótipo público pelo link.
 
 Não há prazo, orçamento, contas de colaboradores ou compromissos individuais confirmados.
+
+
+## Editor de ambientes conectados
+
+Implementados até oito cômodos lado a lado, nomes e medidas editáveis, esquadrias, piso, seleção em planta/3D, desfazer e salvamento local/arquivo. Profundidade e altura são comuns ao conjunto. Veja [uso, arquitetura e limitações](../02-produto/ambientes-conectados.md). O desenvolvimento prossegue sem aguardar os parceiros; a avaliação deles pode orientar ajustes posteriores.
 

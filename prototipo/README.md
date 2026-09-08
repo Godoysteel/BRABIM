@@ -8,11 +8,9 @@ Requer Node.js >=22.13.0. Execute `npm ci` e `npm run dev` nesta pasta. `npm run
 
 ## Escopo e limites
 
-- Seleção sincronizada em planta, perspectiva e lista; campos com limites; desfazer; reenquadrar câmera 3D.
-- O enquadramento da planta é fixo. Medidas do exemplo são entre eixos.
-- Área mostrada é comprimento no eixo × altura, sem descontar encontros ou aberturas; não usar como quantitativo executivo.
-- Não implementa criação livre de paredes, portas, IFC, salvamento ou colaboração simultânea.
-- Edição de espessura é centrada no eixo e não resolve encontros automaticamente.
+O editor cria até oito cômodos retangulares lado a lado, com paredes compartilhadas, portas de ligação, esquadrias externas e pisos. Permite editar medidas, desfazer, salvar no navegador e exportar/abrir projetos JSON. Arquivos antigos de cômodo único são aceitos. Planta e 3D têm enquadramento do conjunto.
+
+Profundidade, altura e espessuras são comuns. Não há planta livre, telhado, fundação, cálculo estrutural ou IFC do modelo editado. Veja [documentação dos ambientes conectados](../docs/02-produto/ambientes-conectados.md).
 
 ## Reaproveitamento open source
 
@@ -27,4 +25,5 @@ O suporte WebMCP é opcional e oferece seleção de parede existente. Não houve
 ## GitHub Pages
 
 Publicação pública: https://godoysteel.github.io/BRABIM/ (editor) e https://godoysteel.github.io/BRABIM/ensaios/ (resultados IFC). O comando npm run build:pages gera arquivos estáticos em dist-pages. O workflow pages.yml publica automaticamente alterações no protótipo na branch main. Não executa o motor Python online.
+
 

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {type Room,validateRoom} from './room';
+import {type Room,validateRoom} from './room.ts';
 import type {IfcMesh} from '../app/viewport';
 // Procedural rectangular prototype assembled with Three.js primitives, not an IFC calculation.
 export function roomMeshes(r:Room):IfcMesh[]{validateRoom(r);const result:IfcMesh[]=[];const {width:w,depth:d,height:h,thickness:t}=r;
@@ -10,3 +10,4 @@ box('P03',-w/2-t/2,h/2,0,t,h,d);box('P04',w/2+t/2,h/2,0,t,h,d);box('F01',0,-r.fl
 // Frames and a thin window pane. Door opening remains visible for inspection.
 for(const [id,cx,z,width,sill,height] of [['D01',door,d/2+t/2,r.doorWidth,0,r.doorHeight],['J01',win,-d/2-t/2,r.windowWidth,r.sill,r.windowHeight]] as [string,number,number,number,number,number][]){box(id,cx-width/2+.025,sill+height/2,z,.05,height,t*.8);box(id,cx+width/2-.025,sill+height/2,z,.05,height,t*.8);box(id,cx,sill+height-.025,z,width,.05,t*.8);if(id==='J01'){box(id,cx,sill+.025,z,width,.05,t*.8);box(id,cx,sill+height/2,z,width-.1,height-.1,.012);}else{box(id,cx-width/2+.025,height/2,z-width/2,.04,height-.05,width-.05);}}
 return result;}
+
