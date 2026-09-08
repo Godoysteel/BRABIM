@@ -14,7 +14,7 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 |---|---|
 | Repositório | GitHub privado: [Godoysteel/BRABIM](https://github.com/Godoysteel/BRABIM), branch main |
 | Pesquisa | Relatos de Bruno e Paulo; dez itens na matriz, sem validação de recorrência geral |
-| Equipe | Paulo será parceiro; Diego participará e não tem experiência com programação |
+| Equipe | Paulo será parceiro; Diego se dedicará ao projeto, contribuindo com sua experiência de engenharia |
 | Interface | Referência visual familiar ao Revit, com identidade própria e fluxos simplificados |
 | Protótipo | Web publicado, inicialmente privado ao proprietário |
 | Geometria atual | Blocos independentes; encontros ainda apresentam sobreposições e sobras |
