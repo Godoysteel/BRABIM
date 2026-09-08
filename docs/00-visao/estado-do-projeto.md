@@ -18,7 +18,7 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 | Interface | Referência visual familiar ao Revit, com identidade própria e fluxos simplificados |
 | Protótipo | Web publicado, inicialmente privado ao proprietário |
 | Geometria atual | Blocos independentes; encontros ainda apresentam sobreposições e sobras |
-| IfcOpenShell | Versão 0.8.5 executada: três cenários geométricos passaram; integração à interface pendente |
+| IfcOpenShell | Versão 0.8.5 executada: três cenários passaram e suas malhas estão disponíveis na tela de ensaios; recálculo online pendente |
 | MVP comercial | Não definido |
 | Plataforma final | Web, desktop ou híbrida ainda em avaliação |
 | Custos | Sem benchmark ou orçamento mensal calculado |

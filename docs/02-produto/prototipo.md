@@ -16,6 +16,8 @@ Three.js fornece renderização, raycasting e navegação 3D. React e componente
 
 ## Limites atuais
 
+A [tela de ensaios IFC](https://brabim-prototipo.godoy13.chatgpt.site/ensaios) permite alternar três resultados pré-calculados, selecionar paredes em planta e 3D e baixar os IFCs. A edição original continua separada e não recalcula com IfcOpenShell. Build e tipos passaram; os arquivos publicados foram comparados por hash com os resultados testados. Validação visual de interação permanece pendente.
+
 - Alterações somente na sessão; recarregar restaura o exemplo.
 - Sem importação IFC, criação livre, portas, salvamento ou colaboração simultânea.
 - Paredes independentes, com encontros ainda não resolvidos geometricamente.
