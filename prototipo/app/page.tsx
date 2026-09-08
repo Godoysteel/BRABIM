@@ -12,7 +12,7 @@ const initial:Wall[] = [
 {id:'P03',name:'Parede oeste',x:-4,z:0,length:5,angle:Math.PI/2,height:2.8,thickness:.2},
 {id:'P04',name:'Parede leste',x:4,z:0,length:5,angle:Math.PI/2,height:2.8,thickness:.2},
 {id:'P05',name:'Divisória interna',x:1,z:0,length:5,angle:Math.PI/2,height:2.8,thickness:.15}];
-export default function Home(){
+export function LegacyHome(){
 const [walls,setWalls]=useState(initial),[selected,setSelected]=useState('P01'),[view,setView]=useState('split'),[history,setHistory]=useState<Wall[][]>([]),[reset,setReset]=useState(0),[panels,setPanels]=useState(true),[message,setMessage]=useState('Selecione uma parede para editar.');
 useWallTool(initial.map(w=>w.id),setSelected);
 const wall=walls.find(w=>w.id===selected)!;
@@ -25,4 +25,7 @@ return <main className="editor"><header className="titlebar"><strong><span class
 }
 
 
+
+
+export {default} from './room-editor';
 

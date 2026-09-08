@@ -1,5 +1,7 @@
 # Produto
 
+- [Cômodo completo](comodo-completo.md): configuração retangular, porta, janela, piso e salvamento local.
+
 - [Protótipo de experiência](prototipo.md): direção visual confirmada, funcionalidades entregues e limites.
 
 Espaço para definição do público prioritário, problema escolhido, escopo do MVP e critérios de validação.
