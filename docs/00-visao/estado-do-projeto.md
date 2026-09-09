@@ -19,6 +19,7 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 | Protótipo | Web público no GitHub Pages |
 | Geometria atual | Cômodos retangulares alinhados, divisórias únicas e portas de ligação; geometria demonstrativa sem recálculo IFC |
 | IfcOpenShell | Versão 0.8.5 executada: três cenários passaram e suas malhas estão disponíveis na tela de ensaios; recálculo online pendente |
+| Público prioritário | Estudante; modelo comercial confirmado ([0007](../04-decisoes/0007-publico-estudante-comercial.md)); não validado pela pesquisa existente (feita com profissionais atuantes) |
 | MVP comercial | Não definido |
 | Plataforma final | Desktop — decidido; empacotamento (Tauri + sidecar IfcOpenShell) validado de ponta a ponta ([0006](../04-decisoes/0006-plataforma-desktop-e-retorno-ifcopenshell.md)) |
 | Custos | Sem benchmark ou orçamento mensal calculado |
