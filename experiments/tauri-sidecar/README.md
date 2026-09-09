@@ -30,6 +30,10 @@ sidecar spawned, pid 40132
 
 O tempo de partida (~10s) é mais alto que os ~3,5s medidos isoladamente no experimento anterior — provavelmente efeito de build debug do próprio app Tauri e/ou verificação do Windows Defender no executável recém-copiado; não investigado a fundo. O que importa está confirmado: a comunicação funciona ponta a ponta, e a resposta aquecida (44ms) é rápida o bastante para edição ao vivo.
 
+## Ícone e tela de abertura
+
+O ícone do app foi gerado a partir de [docs/marca/icone-robo.png](../../docs/marca/icone-robo.png) via `npm run tauri icon <caminho>` (gera todas as resoluções Windows/macOS/Linux/mobile automaticamente). A tela de abertura (`src/index.html`, elemento `#splash`) mostra [docs/marca/logo-brabim.png](../../docs/marca/logo-brabim.png) em tela cheia desde o carregamento e some (com transição) assim que a mensagem `ready` do sidecar chega — testado manualmente, funcionou como esperado.
+
 ## Limites deste teste
 
 Build debug, não release (o build de produção deve iniciar mais rápido). Testado só manualmente numa sessão; sem automação de teste de UI para uma janela nativa. O motivo do ~10s de partida fria não foi isolado. Falta medir o tamanho final do instalador com o executável de 71 MB do motor embutido.
