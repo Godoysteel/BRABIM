@@ -4,7 +4,7 @@ Executado em 08/09/2026. Com a plataforma confirmada como desktop ([decisão 000
 
 ## Abordagem
 
-`worker.py` sobe o IfcOpenShell uma vez (pagando o custo de import só na inicialização) e depois fica lendo requisições em JSON, uma por linha, via stdin, respondendo em JSON via stdout — em vez de abrir um processo Python novo a cada edição do usuário. Reaproveita a mesma cena de cinco paredes dos experimentos anteriores.
+`worker.py` sobe o IfcOpenShell uma vez (pagando o custo de import só na inicialização) e depois fica lendo requisições em JSON, uma por linha, via stdin, respondendo em JSON via stdout — em vez de abrir um processo Python novo a cada edição do usuário. Recebe parâmetros reais de um cômodo (`{room: {width, depth, height, thickness}}`) e monta um retângulo de 4 paredes com os 4 cantos conectados, devolvendo vértices/faces de cada parede — não mais um cenário fixo de teste (essa evolução foi validada de ponta a ponta no [experimento Tauri](../tauri-sidecar/README.md), com a interface editando e vendo o resultado mudar em tempo real).
 
 Empacotado com PyInstaller (`--onefile --collect-all ifcopenshell`).
 

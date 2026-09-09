@@ -13,11 +13,13 @@
       <img src="/assets/splash.png" alt="BRABIM" />
       <p id="splash-status">Iniciando o motor...</p>
     </div>
-    <main class="container">
-      <div class="row">
-        <button id="send">Enviar requisição de teste</button>
-      </div>
-      <pre id="log" style="text-align:left;white-space:pre-wrap"></pre>
+    <main class="editor">
+      <aside class="fields">
+        <label>Largura (m)<input id="width" type="number" step="0.1" value="5" /></label>
+        <label>Profundidade (m)<input id="depth" type="number" step="0.1" value="4" /></label>
+        <p id="status">iniciando...</p>
+      </aside>
+      <svg id="plan" viewBox="-6 -5 12 10"></svg>
     </main>
   </body>
 </html>

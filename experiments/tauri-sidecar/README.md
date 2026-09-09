@@ -34,6 +34,12 @@ O tempo de partida (~10s) é mais alto que os ~3,5s medidos isoladamente no expe
 
 O ícone do app foi gerado a partir de [docs/marca/icone-robo.png](../../docs/marca/icone-robo.png) via `npm run tauri icon <caminho>` (gera todas as resoluções Windows/macOS/Linux/mobile automaticamente). A tela de abertura (`src/index.html`, elemento `#splash`) mostra [docs/marca/logo-brabim.png](../../docs/marca/logo-brabim.png) em tela cheia desde o carregamento e some (com transição) assim que a mensagem `ready` do sidecar chega — testado manualmente, funcionou como esperado.
 
+## Loop interativo real (parâmetros de verdade, não mais cenário fixo)
+
+`../desktop-sidecar/worker.py` deixou de rodar sempre o mesmo cenário de teste: agora recebe `{id, room:{width,depth,height,thickness}}` e monta um cômodo retangular de verdade (4 paredes com os 4 cantos conectados via `geometry.connect_path`), devolvendo os vértices/faces de cada parede. A interface (`src/index.html` + `src/main.js`) ganhou campos de largura e profundidade que, a cada mudança (com debounce de 300ms), mandam os novos parâmetros pro motor e redesenham a planta em SVG com o resultado real devolvido — não mais um valor decorativo.
+
+Testado manualmente: mudar a largura de 5 para 8 e para 3 metros atualiza a planta corretamente, com o motor respondendo em ~30ms por edição (depois do aquecimento inicial). Este é o primeiro loop "editar → motor recalcula → tela atualiza" funcionando de ponta a ponta com dados reais, não um teste com clique manual e cenário fixo.
+
 ## Limites deste teste
 
 Build debug, não release (o build de produção deve iniciar mais rápido). Testado só manualmente numa sessão; sem automação de teste de UI para uma janela nativa. O motivo do ~10s de partida fria não foi isolado. Falta medir o tamanho final do instalador com o executável de 71 MB do motor embutido.

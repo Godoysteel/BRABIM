@@ -17,6 +17,33 @@
   -webkit-text-size-adjust: 100%;
 }
 
+.editor {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  height: 100vh;
+}
+
+.fields {
+  padding: 1.5em;
+  border-right: 1px solid #dde3e7;
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+
+.fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+  font-size: 0.85em;
+  text-align: left;
+}
+
+#plan {
+  width: 100%;
+  height: 100%;
+}
+
 #splash {
   position: fixed;
   inset: 0;
