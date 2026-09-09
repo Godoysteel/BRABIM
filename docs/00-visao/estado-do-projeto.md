@@ -22,6 +22,7 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 | MVP comercial | Não definido |
 | Plataforma final | Desktop — decidido; empacotamento (Tauri + sidecar IfcOpenShell) validado de ponta a ponta ([0006](../04-decisoes/0006-plataforma-desktop-e-retorno-ifcopenshell.md)) |
 | Custos | Sem benchmark ou orçamento mensal calculado |
+| Licenciamento | Pendente ([0002](../04-decisoes/0002-reutilizacao-e-ifcopenshell.md)) — revisão jurídica da licença LGPL do IfcOpenShell/OCCT antes de cobrar por qualquer versão; se inviável, IfcOpenShell/OCCT são dispensados |
 
 ## Navegação
 
