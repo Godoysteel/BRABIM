@@ -11,11 +11,16 @@
     "start": "wrangler dev --config dist/server/wrangler.json",
     "lint": "oxlint",
     "format": "oxfmt",
-    "build:pages": "vite build --config vite.pages.config.ts && node scripts/finish-pages.mjs"
+    "build:pages": "vite build --config vite.pages.config.ts && node scripts/finish-pages.mjs",
+    "tauri:dev": "vite --config vite.tauri.config.ts",
+    "tauri:build": "vite build --config vite.tauri.config.ts",
+    "tauri": "tauri"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",
     "@shadcn/react": "0.3.0",
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-shell": "^2.3.6",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "1.1.1",
@@ -40,6 +45,7 @@
     "@cloudflare/workers-types": "4.20260515.1",
     "@openai/sites-vite-plugin": "0.2.0",
     "@tailwindcss/postcss": "4.2.1",
+    "@tauri-apps/cli": "^2.11.4",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",

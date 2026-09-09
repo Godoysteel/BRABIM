@@ -1,6 +1,6 @@
 # Estado consolidado do BRABIM
 
-**Atualizado em:** 08/09/2026. Este registro consolida a conversa com o idealizador; as entrevistas originais permanecem preservadas.
+**Atualizado em:** 09/09/2026. Este registro consolida a conversa com o idealizador; as entrevistas originais permanecem preservadas.
 
 ## Visão confirmada
 
@@ -17,8 +17,8 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 | Equipe | Paulo será parceiro; Diego se dedicará ao projeto, contribuindo com sua experiência de engenharia |
 | Interface | Referência visual familiar ao Revit, com identidade própria e fluxos simplificados |
 | Protótipo | Web público no GitHub Pages |
-| Geometria atual | Cômodos retangulares alinhados, divisórias únicas e portas de ligação; geometria demonstrativa sem recálculo IFC |
-| IfcOpenShell | Versão 0.8.5 executada: três cenários passaram e suas malhas estão disponíveis na tela de ensaios; recálculo online pendente |
+| Geometria atual | Cômodos retangulares alinhados, divisórias únicas e portas de ligação; geometria demonstrativa por padrão, com opção de motor real (IFC) para o ambiente ativo isolado no app desktop |
+| IfcOpenShell | Versão 0.8.5; integrado de verdade ao app desktop via processo local (sidecar) — ver [integração](../03-arquitetura/integracao-ifcopenshell.md). Cobre só o retângulo de 4 paredes de um ambiente isolado; ambientes conectados e aberturas ainda não |
 | Público prioritário | Estudante; modelo comercial confirmado ([0007](../04-decisoes/0007-publico-estudante-comercial.md)); não validado pela pesquisa existente (feita com profissionais atuantes) |
 | MVP comercial | Não definido |
 | Plataforma final | Desktop — decidido; empacotamento (Tauri + sidecar IfcOpenShell) validado de ponta a ponta ([0006](../04-decisoes/0006-plataforma-desktop-e-retorno-ifcopenshell.md)) |
@@ -35,11 +35,11 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 
 ## Próximas entregas
 
-1. Revisar os [IFCs e resultados dos primeiros testes](../../experiments/ifcopenshell/README.md), já gerados com conexões explícitas.
+1. Estender o motor real para ambientes conectados (paredes compartilhadas, portas de ligação) — hoje só cobre um ambiente isolado.
 2. Ampliar a validação de junções para outros ângulos e edição sequencial de parâmetros.
-3. Medir processamento e consumo de memória.
-4. Conectar a geometria calculada à planta e ao 3D; testar edição e falhas de comunicação.
-5. Definir infraestrutura do motor; Paulo e Diego podem testar o protótipo público pelo link.
+3. Medir processamento e consumo de memória com modelos maiores (múltiplos ambientes).
+4. Adicionar porta, janela e piso ao cálculo real do motor (hoje só as 4 paredes).
+5. Resolver a pendência de licenciamento (LGPL) antes de qualquer cobrança; Paulo e Diego podem testar o protótipo público pelo link.
 
 Não há prazo, orçamento, contas de colaboradores ou compromissos individuais confirmados.
 

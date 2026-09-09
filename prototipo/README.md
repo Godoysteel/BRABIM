@@ -26,4 +26,15 @@ O suporte WebMCP é opcional e oferece seleção de parede existente. Não houve
 
 Publicação pública: https://godoysteel.github.io/BRABIM/ (editor) e https://godoysteel.github.io/BRABIM/ensaios/ (resultados IFC). O comando npm run build:pages gera arquivos estáticos em dist-pages. O workflow pages.yml publica automaticamente alterações no protótipo na branch main. Não executa o motor Python online.
 
+## App desktop (Tauri)
+
+A plataforma final do BRABIM é desktop, não navegador ([decisão 0006](../docs/04-decisoes/0006-plataforma-desktop-e-retorno-ifcopenshell.md)). `src-tauri/` empacota esta mesma interface (React/Three.js, sem duplicação de código) numa janela nativa via [Tauri](https://tauri.app), com o motor IfcOpenShell rodando como processo local ("sidecar") — sem servidor externo.
+
+Requer Rust (`rustup`) e, no Windows, o componente "Desenvolvimento para desktop com C++" do Visual Studio. Para rodar:
+
+1. Gerar o executável do motor (ver [experiments/desktop-sidecar](../experiments/desktop-sidecar/README.md)) e copiá-lo para `src-tauri/binaries/brabim-engine-x86_64-pc-windows-msvc.exe` (nome exigido pelo Tauri: `<nome>-<target-triple>.exe`; o binário não é versionado, é gerado localmente).
+2. `npm run tauri dev` para rodar em desenvolvimento, ou `npm run tauri build` para gerar o instalador.
+
+Na interface, o campo **"Motor real (IFC)"** na barra de ferramentas liga o cálculo real do IfcOpenShell para o ambiente ativo (não aparece na versão web, onde o motor não está disponível). Hoje calcula só o retângulo de 4 paredes desse ambiente — porta, janela, piso e ambientes conectados continuam com a geometria demonstrativa; a integração completa é trabalho futuro.
+
 

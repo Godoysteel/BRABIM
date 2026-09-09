@@ -39,3 +39,9 @@ next-env.d.ts
 
 *.tsbuildinfo
 /dist-pages/
+/dist-tauri/
+
+# Tauri desktop build (heavy, machine-specific)
+/src-tauri/target/
+/src-tauri/binaries/
+/src-tauri/gen/

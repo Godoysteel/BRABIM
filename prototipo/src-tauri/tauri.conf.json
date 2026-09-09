@@ -1,0 +1,43 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "brabim",
+  "version": "0.1.0",
+  "identifier": "com.godoysteel.brabim",
+  "build": {
+    "frontendDist": "../dist-tauri",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run tauri:dev",
+    "beforeBuildCommand": "npm run tauri:build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "BRABIM",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "externalBin": ["binaries/brabim-engine"],
+    "android": {
+      "debugApplicationIdSuffix": ".debug"
+    }
+  }
+}

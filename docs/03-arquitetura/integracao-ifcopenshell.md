@@ -1,6 +1,6 @@
 # Integração do IfcOpenShell
 
-**Data:** 08/09/2026. **Status:** teste geométrico inicial executado; integração à interface não concluída.
+**Data:** 08-09/09/2026. **Status:** integrado ao app desktop real (não mais só experimento) para o retângulo básico de um ambiente; ambientes conectados e aberturas continuam com geometria demonstrativa.
 
 ## Resultado do primeiro experimento
 
@@ -25,6 +25,12 @@ Rodar o IfcOpenShell no próprio navegador via WASM foi testado e descartado par
 Isso levou a testar OCCT/WASM (união booleana de sólidos) como alternativa sem servidor — ver [experimento](../../experiments/opencascade-wasm/README.md) e [decisão 0005](../04-decisoes/0005-occt-wasm-para-encontros.md) — mas a plataforma final foi esclarecida como **desktop**, não navegador ([decisão 0006](../04-decisoes/0006-plataforma-desktop-e-retorno-ifcopenshell.md)). Em desktop, o motor Python roda embutido no próprio aplicativo, sem precisar de servidor externo; a razão original para evitar o IfcOpenShell nativo deixa de existir. O motor volta a ser o **IfcOpenShell nativo**, mantendo conformidade IFC desde o início. Falta decidir como o aplicativo desktop empacota e se comunica com esse processo Python.
 
 Em uma futura edição desktop, o motor poderá ser empacotado localmente. Para a opção web com servidor, haverá comunicação de rede. Nenhuma dessas opções foi definida como plataforma final.
+
+## Integração real no app (09/09/2026)
+
+Deixou de ser só experimento isolado: `prototipo/src-tauri/` empacota a interface real do BRABIM num app Tauri, com `prototipo/lib/engine-client.ts` conversando com o sidecar do motor. Um campo **"Motor real (IFC)"** na interface liga o cálculo real do IfcOpenShell para o ambiente ativo — testado manualmente, funciona: editar largura/profundidade atualiza a planta e o 3D com a geometria calculada de verdade, não mais a demonstrativa.
+
+Escopo desta integração: só o retângulo de 4 paredes do ambiente ativo (o mesmo caso validado no [experimento de empacotamento](../../experiments/desktop-sidecar/README.md)). Ainda não integrados ao motor: porta, janela, piso, paredes compartilhadas entre ambientes conectados e portas de ligação — esses continuam com a geometria demonstrativa do Three.js. Ligar um segundo ambiente ao motor hoje mostraria paredes duplicadas na fronteira compartilhada, já que o motor ainda não sabe que dois ambientes são vizinhos.
 
 ## Validação prevista
 
