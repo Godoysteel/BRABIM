@@ -1,0 +1,37 @@
+# IfcOpenShell empacotado como processo local (sidecar) — teste de viabilidade
+
+Executado em 08/09/2026. Com a plataforma confirmada como desktop ([decisão 0006](../../docs/04-decisoes/0006-plataforma-desktop-e-retorno-ifcopenshell.md)), testa se o IfcOpenShell nativo pode ser empacotado num executável standalone (sem exigir Python instalado na máquina do usuário) e conversar com o app via um processo local de longa duração — o padrão que o Tauri chama de "sidecar".
+
+## Abordagem
+
+`worker.py` sobe o IfcOpenShell uma vez (pagando o custo de import só na inicialização) e depois fica lendo requisições em JSON, uma por linha, via stdin, respondendo em JSON via stdout — em vez de abrir um processo Python novo a cada edição do usuário. Reaproveita a mesma cena de cinco paredes dos experimentos anteriores.
+
+Empacotado com PyInstaller (`--onefile --collect-all ifcopenshell`).
+
+## Execução
+
+Em `experiments/desktop-sidecar`, com Python 3.14: `python -m pip install --target .venv-libs ifcopenshell numpy pyinstaller` seguido de `PYTHONPATH=.venv-libs python -m PyInstaller --onefile --name brabim-engine --paths .venv-libs --collect-all ifcopenshell worker.py`. O executável fica em `dist/brabim-engine.exe`.
+
+## Problemas encontrados e resolvidos
+
+O PyInstaller analisa o código estaticamente para decidir o que empacotar, mas o `ifcopenshell.api` carrega seus submódulos dinamicamente por string (`api.run('root.create_entity', ...)` importa `ifcopenshell.api.root` em tempo de execução) — invisível para essa análise. A primeira tentativa (`--onefile` simples) gerou um executável que iniciava mas falhava em toda requisição (`No module named 'ifcopenshell.api.root'`). A flag `--collect-all ifcopenshell` resolveu isso e também um segundo problema (um arquivo de dados JSON interno do pacote que também não era detectado automaticamter).
+
+## Resultado
+
+| Etapa | Tempo |
+|---|---|
+| Iniciar o executável até sinalizar pronto (`ready`) | ~3,5 s |
+| Primeira requisição (aquecimento) | ~0,1 s |
+| Requisições seguintes | ~0,02–0,03 s |
+
+Tamanho do executável: **71 MB** (Python + IfcOpenShell + NumPy, tudo incluído).
+
+O custo de ~3,5 s acontece **uma vez**, quando o aplicativo desktop sobe (inicia o processo local e mantém aberto durante a sessão) — não a cada edição. Por edição, a resposta de ~20-30 ms é consistente com o já medido no [experimento nativo original](../ifcopenshell/README.md).
+
+## Limites deste teste
+
+Não testa a parte Tauri (Rust não estava disponível neste ambiente) — só valida que o motor **pode** ser empacotado como executável standalone e responder rápido como processo de longa duração. Falta: empacotamento real via Tauri sidecar, comunicação real do frontend React com esse processo (aqui foi testado só via `subprocess` do Python), tamanho final do instalador do app completo, e teste em outras versões do Windows/macOS/Linux — só testado no ambiente de desenvolvimento atual (Windows). O executável de 71 MB provavelmente pode ser reduzido usando `--onedir` em vez de `--onefile` (evita descompactar num diretório temporário a cada início, reduzindo os ~3,5 s de partida), não testado aqui.
+
+## Conclusão
+
+O maior risco de empacotar o IfcOpenShell — a biblioteca ser compilada/nativa e não um pacote Python puro — está resolvido: o PyInstaller consegue empacotá-la com os ajustes acima, e o padrão de processo de longa duração dá respostas rápidas o bastante para edição ao vivo. Falta fechar a ponta Tauri (instalar Rust, configurar o sidecar de verdade) para ter o caminho completo validado.

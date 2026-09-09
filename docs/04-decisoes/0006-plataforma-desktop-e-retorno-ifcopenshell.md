@@ -16,10 +16,12 @@ O motor de encontros de parede volta a ser o **IfcOpenShell nativo**, não o OCC
 
 ## Alternativas e consequências
 
-O trabalho de integração do [experimento OCCT/WASM](../../experiments/opencascade-wasm/README.md) não é descartado como conhecimento (a técnica de união booleana continua válida e pode servir de referência ou plano B), mas deixa de ser a via adotada. Falta decidir e validar como o aplicativo desktop vai empacotar e comunicar com o processo Python do IfcOpenShell — essa é a próxima decisão de arquitetura pendente, não resolvida aqui.
+O trabalho de integração do [experimento OCCT/WASM](../../experiments/opencascade-wasm/README.md) não é descartado como conhecimento (a técnica de união booleana continua válida e pode servir de referência ou plano B), mas deixa de ser a via adotada.
+
+Empacotamento escolhido para o app desktop: **Tauri**, chamando o IfcOpenShell como processo local de longa duração ("sidecar"), em vez de Electron — instalador menor, sem embutir um Chromium inteiro. O [experimento de empacotamento](../../experiments/desktop-sidecar/README.md) validou a parte de maior risco: o IfcOpenShell nativo (com suas dependências compiladas) pode ser empacotado num executável standalone via PyInstaller — não é trivial (o `ifcopenshell.api` carrega módulos dinamicamente, exigindo `--collect-all` para funcionar), mas funciona. Rodando como processo de longa duração, o custo de inicialização (~3,5s) acontece uma vez ao abrir o app; cada requisição depois disso responde em ~20-30ms. A integração com o Tauri em si (sidecar real, comunicação com o frontend React) ainda não foi testada — o ambiente de desenvolvimento atual não tinha o toolchain Rust instalado.
 
 O protótipo web publicado no GitHub Pages continua existindo como ferramenta de validação de interface e fluxo, não como o produto final — consistente com o que já estava registrado em [prototipo.md](../02-produto/prototipo.md) ("Isso não define a plataforma final do produto").
 
 ## Referências
 
-[Decisão 0002](0002-reutilizacao-e-ifcopenshell.md) · [Decisão 0004](0004-wasm-nao-viavel-tempo-real.md) · [Decisão 0005](0005-occt-wasm-para-encontros.md) · [Experimento nativo](../../experiments/ifcopenshell/README.md)
+[Decisão 0002](0002-reutilizacao-e-ifcopenshell.md) · [Decisão 0004](0004-wasm-nao-viavel-tempo-real.md) · [Decisão 0005](0005-occt-wasm-para-encontros.md) · [Experimento nativo](../../experiments/ifcopenshell/README.md) · [Experimento de empacotamento desktop](../../experiments/desktop-sidecar/README.md)
