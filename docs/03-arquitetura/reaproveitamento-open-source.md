@@ -22,9 +22,15 @@ Documenta ferramentas de extensão, encontro de topo e meia-esquadria. O módulo
 
 Fontes: [modelagem de paredes, documentação instável](https://docs-unstable.bonsaibim.org/guides/authoring/basic_modeling/creating_walls.html), [módulo de paredes](https://raw.githubusercontent.com/IfcOpenShell/IfcOpenShell/v0.8.0/src/bonsai/bonsai/bim/module/model/wall.py).
 
-### Blueprint3D — alternativa próxima ao frontend
+### OCCT (via OpenCascade.js) — escolha atual, testada
 
-O arquivo `half_edge.ts` calcula extremidades internas e externas a partir de paredes adjacentes. A implementação original usa TypeScript antigo, jQuery e APIs antigas do Three.js. Sua licença é MIT. É candidato a adaptação, não adoção imediata: a rotina inspecionada usa bissetriz e deslocamento da própria parede, portanto espessuras diferentes e encontros em T precisam de ensaios específicos.
+O FreeCAD resolve encontros de parede no seu módulo Arch por união booleana de sólidos (um sólido "hospedeiro" mais "adições"), não por uma fórmula de junção específica por caso. O motor por trás disso, Open Cascade Technology (OCCT), tem um binding WebAssembly maduro e ativamente sincronizado com o projeto original: [OpenCascade.js](https://ocjs.org/) (pacote npm `opencascade.js`, LGPL-2.1). Testado em [experimento próprio](../../experiments/opencascade-wasm/README.md): a mesma cena de cinco paredes com dois encontros em T uniu-se corretamente num único sólido em menos de 1 segundo, rodando no navegador. Ver [decisão 0005](../04-decisoes/0005-occt-wasm-para-encontros.md). Pendências: tamanho do download (~14 MB comprimido), ângulos arbitrários, aberturas e teste em navegador real, não só Node.
+
+Bonsai foi descartado como candidato direto (não como referência de estudo): depende de Blender rodando como aplicativo desktop, não é embarcável numa página web de forma alguma, independente de servidor ou não. FreeCAD tem o mesmo problema como aplicativo — o que se aproveita dele é o OCCT isoladamente (via OpenCascade.js), não o FreeCAD em si.
+
+### Blueprint3D — bissetriz, mas só resolve cantos em L
+
+O arquivo `half_edge.ts` calcula extremidades internas e externas a partir de paredes adjacentes, por bissetriz angular entre duas paredes que se encontram num vértice. A implementação original usa TypeScript antigo, jQuery e APIs antigas do Three.js. Sua licença é MIT. Inspeção posterior do código confirmou que a estrutura assume exatamente duas paredes por vértice: cantos em L funcionam para qualquer ângulo, mas **não há suporte a encontros em T ou cruzamentos** (três ou mais paredes no mesmo ponto), nem a espessuras diferentes no mesmo encontro. Como o BRABIM já depende de encontros em T (portas de ligação entre ambientes), esse candidato resolve só parte do problema — descartado em favor do OCCT (união booleana de sólidos, que resolve L e T sem distinção de caso).
 
 Fontes: [código de HalfEdge](https://raw.githubusercontent.com/furnishup/blueprint3d/master/src/model/half_edge.ts), [licença](https://raw.githubusercontent.com/furnishup/blueprint3d/master/LICENSE.txt).
 

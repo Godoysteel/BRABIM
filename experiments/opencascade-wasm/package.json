@@ -1,0 +1,12 @@
+{
+  "name": "opencascade-wasm",
+  "private": true,
+  "type": "module",
+  "description": "Teste de viabilidade: encontros de parede por união booleana de sólidos (OCCT/WASM), sem servidor.",
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "dependencies": {
+    "opencascade.js": "1.1.1"
+  }
+}
