@@ -1,6 +1,6 @@
 # 0008 — Telhado por interseção de planos (mecanismo do Revit), não straight skeleton
 
-**Data:** 09/09/2026. **Status:** geometria, empacotamento e ponte para IFC real todos validados por experimento; não integrada ao produto (falta trabalho de produto, não de viabilidade técnica).
+**Data:** 09-10/09/2026. **Status:** integrado ao app desktop real (não mais só experimento), para o retângulo de um ambiente isolado.
 
 ## Contexto
 
@@ -24,7 +24,26 @@ Ponto de atenção descoberto e parcialmente resolvido: a instalação padrão d
 
 Um [terceiro experimento](../../experiments/desktop-sidecar/roof-to-ifc.README.md) fechou a última lacuna técnica: não há ponte direta documentada entre `TopoDS_Shape` (OCCT) e uma representação IFC, mas não precisa — basta triangular o sólido (mesma técnica do experimento em JS) e entregar vértices/triângulos para `ifcopenshell.api.geometry.add_mesh_representation`, que monta a representação sozinho. Testado de ponta a ponta: sólido do telhado calculado pelo OCP virou uma entidade `IfcRoof` de verdade, escrita num arquivo `.ifc` válido (IFC4, `IfcPolygonalFaceSet`), e relida corretamente pelo motor de geometria do próprio `ifcopenshell` — altura da cumeeira bateu exatamente com o esperado (3 m de beiral + inclinação até 4,5 m).
 
-O que resta agora é trabalho de produto, não mais dúvida de viabilidade técnica: decidir o contorno a partir do modelo de ambientes do BRABIM em vez de um retângulo fixo de teste, expor os controles de inclinação por aresta na interface, testar contornos não retangulares (L, reentrâncias) e águas com inclinações diferentes entre si, e resolver o peso do instalador (~250 MB) antes de considerar isso pronto.
+## Integração real no app e dois bugs de alinhamento (10/09/2026)
+
+O `worker.py` (mesmo processo que já resolve paredes/porta/janela, ver [integração do IfcOpenShell](../03-arquitetura/integracao-ifcopenshell.md)) passou a calcular o telhado de verdade para o ambiente ativo, ligado por um campo "Telhado (4 águas)" na interface. Dois bugs de alinhamento entre parede e telhado apareceram nesse processo e foram corrigidos:
+
+**Parede atravessando o telhado (face inferior no lugar errado).** A primeira versão modelava o telhado como um único corte plano na altura do beiral, o que ou apagava o beiral (se o corte cobrisse o contorno estendido) ou deixava a região de beiral inteiramente sólida até o chão (se o corte cobrisse só o contorno original). A correção definitiva trocou a técnica: o telhado passou a ser uma casca de espessura real — dois sólidos (`_roof_mass`) idênticos exceto pela altura de ancoragem, um subtraído do outro (`BRepAlgoAPI_Cut`). Uma primeira tentativa dessa casca ainda saiu invertida (face de baixo ancorada `thickness` abaixo do beiral, em vez de exatamente nele), deixando os 10 cm de topo da parede dentro do sólido do telhado — só ficou visível com números exatos, não com captura de tela: o [painel de depuração](#painel-de-depuração-para-bugs-de-geometria) construído nesta mesma sessão exportou os vértices reais e mostrou parede indo até z=2,8 com a face inferior do telhado em z=2,7 na mesma região. Corrigido invertendo as âncoras: a face de baixo (contato com a parede) fica exatamente em `eave_height`; a face de cima (visível) fica `thickness` acima.
+
+**Quina da parede fora do lugar exato (offset de meia espessura).** Depois do primeiro bug corrigido, o usuário definiu o critério exato desejado: "a quina da parede deveria coincidir com a aresta inferior do encontro das águas" — ou seja, o ponto de beiral zero (sem inclinação ainda) do telhado deve cair exatamente na quina externa da parede, nem para dentro nem para fora. O `build_room` estava passando `width`/`depth` (medidas internas livres do ambiente) direto para `build_roof`, mas a face externa real da parede fica meia espessura further out — a quina caía `thickness/2` para dentro da zona de beiral. Corrigido chamando `build_roof(..., w + t, d + t, ...)`, isto é, usando a medida externa da parede (medida livre + espessura) como referência do telhado. Verificado empiricamente (não só algebricamente) em três conjuntos de dimensões diferentes (5×4×0,2 / 7×3×0,15 / 3,5×6×0,25 m), com requisições de diagnóstico a beiral zero: em todos os casos a quina externa da parede caiu exatamente em `z = eave_height` na face inferior do telhado, confirmando que a correção não depende do caso de teste original.
+
+## Painel de depuração para bugs de geometria
+
+Como não é possível ver a janela nativa do Tauri diretamente, os dois bugs acima só foram diagnosticados com precisão depois de construir, a pedido do usuário, um painel de ferramentas dedicado no editor (`prototipo/app/room-editor.tsx` + `viewport.tsx`):
+
+- **Coordenadas por clique**: clicar em qualquer superfície do 3D registra o ponto exato (x, profundidade, altura) num histórico dos últimos 5 cliques, com a distância até o clique anterior.
+- **Exportação de depuração em JSON**: baixa um arquivo com os parâmetros do ambiente ativo e os vértices/faces crus de cada malha exibida (paredes, telhado) — permite ler os números exatos de qualquer bug de geometria em vez de tentar interpretar uma captura de tela.
+- **Wireframe**: alterna todos os materiais para malha de arame, útil para ver sobreposições escondidas atrás de faces sólidas.
+- **Corte de seção**: um plano de recorte do Three.js (`localClippingEnabled`) esconde metade frontal do modelo, permitindo olhar direto para dentro de uma junção sem girar a câmera.
+
+Essas ferramentas resolveram em uma sessão dois bugs reais que provavelmente exigiriam várias rodadas de captura de tela e adivinhação.
+
+O que resta agora é trabalho de produto, não mais dúvida de viabilidade técnica: decidir o contorno a partir do modelo de ambientes do BRABIM em vez de um retângulo fixo de teste (ainda só suporta um ambiente isolado, retangular e alinhado aos eixos — sem ambientes conectados nem formato em L), expor os controles de inclinação/beiral por aresta na interface (hoje fixos em `{slope:.6, slopedEdges:['north','south','east','west']}`), testar águas com inclinações diferentes entre si, e resolver o peso do instalador (~250 MB) antes de considerar isso pronto.
 
 ## Referências
 

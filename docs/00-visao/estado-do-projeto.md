@@ -1,6 +1,6 @@
 # Estado consolidado do BRABIM
 
-**Atualizado em:** 09/09/2026. Este registro consolida a conversa com o idealizador; as entrevistas originais permanecem preservadas.
+**Atualizado em:** 10/09/2026. Este registro consolida a conversa com o idealizador; as entrevistas originais permanecem preservadas.
 
 ## Visão confirmada
 
@@ -17,8 +17,8 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 | Equipe | Paulo será parceiro; Diego se dedicará ao projeto, contribuindo com sua experiência de engenharia |
 | Interface | Referência visual familiar ao Revit, com identidade própria e fluxos simplificados |
 | Protótipo | Web público no GitHub Pages |
-| Geometria atual | Cômodos retangulares alinhados, divisórias únicas e portas de ligação; geometria demonstrativa por padrão, com opção de motor real (IFC) para o ambiente ativo isolado no app desktop |
-| IfcOpenShell | Versão 0.8.5; integrado de verdade ao app desktop via processo local (sidecar) — ver [integração](../03-arquitetura/integracao-ifcopenshell.md). Cobre o retângulo de 4 paredes de um ambiente isolado, com porta e janela cortadas de verdade (booleana real); piso e ambientes conectados ainda não |
+| Geometria atual | Cômodos retangulares alinhados, divisórias únicas e portas de ligação; geometria demonstrativa por padrão, com opção de motor real (IFC), incluindo telhado, para o ambiente ativo isolado no app desktop |
+| IfcOpenShell | Versão 0.8.5; integrado de verdade ao app desktop via processo local (sidecar) — ver [integração](../03-arquitetura/integracao-ifcopenshell.md). Cobre o retângulo de 4 paredes de um ambiente isolado, com porta, janela e telhado (4 águas, OCCT) cortados/calculados de verdade; piso e ambientes conectados ainda não |
 | Público prioritário | Estudante; modelo comercial confirmado ([0007](../04-decisoes/0007-publico-estudante-comercial.md)); não validado pela pesquisa existente (feita com profissionais atuantes) |
 | MVP comercial | Não definido |
 | Plataforma final | Desktop — decidido; empacotamento (Tauri + sidecar IfcOpenShell) validado de ponta a ponta ([0006](../04-decisoes/0006-plataforma-desktop-e-retorno-ifcopenshell.md)) |
@@ -38,8 +38,9 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 1. Estender o motor real para ambientes conectados (paredes compartilhadas, portas de ligação) — hoje só cobre um ambiente isolado.
 2. Ampliar a validação de junções para outros ângulos e edição sequencial de parâmetros.
 3. Medir processamento e consumo de memória com modelos maiores (múltiplos ambientes).
-4. Adicionar piso ao cálculo real do motor (porta e janela já cortam de verdade; falta o piso).
-5. Resolver a pendência de licenciamento (LGPL) antes de qualquer cobrança; Paulo e Diego podem testar o protótipo público pelo link.
+4. Adicionar piso ao cálculo real do motor (porta, janela e telhado já calculam de verdade; falta o piso).
+5. Expor controles de inclinação/beiral do telhado na interface (hoje fixos no código) e testar contornos não retangulares.
+6. Resolver a pendência de licenciamento (LGPL) antes de qualquer cobrança; Paulo e Diego podem testar o protótipo público pelo link.
 
 Não há prazo, orçamento, contas de colaboradores ou compromissos individuais confirmados.
 

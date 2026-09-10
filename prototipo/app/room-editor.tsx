@@ -11,10 +11,14 @@ const labels:Record<keyof Room,string>={width:'Largura interna',depth:'Profundid
 const elementNames:Record<string,string>={P01:'Parede norte',P02:'Parede sul',P03:'Parede oeste',P04:'Parede leste',D01:'Porta externa',J01:'Janela',F01:'Piso'};
 export default function RoomEditor(){
   const [house,setHouse]=useState<House>(initialHouse),[active,setActive]=useState('r1'),[selected,select]=useState('r1:P01'),[history,setHistory]=useState<House[]>([]),[view,setView]=useState('split'),[reset,setReset]=useState(0),[message,setMessage]=useState('Adicione cômodos à direita para ampliar o projeto.');
+  const [pickHistory,setPickHistory]=useState<[number,number,number][]>([]);
+  const [debugOpen,setDebugOpen]=useState(false),[wireframeOn,setWireframeOn]=useState(false),[sectionCutOn,setSectionCutOn]=useState(false);
+  function onPick(point:[number,number,number]){setPickHistory(h=>[point,...h].slice(0,5));}
   const input=useRef<HTMLInputElement>(null);
   const planRef=useRef<SVGSVGElement>(null);
   const dragRef=useRef<{roomId:string;key:'doorOffset'|'windowOffset';width:number}|null>(null);
   const [engineOn,setEngineOn]=useState(false),[engineStatus,setEngineStatus]=useState(''),[engineMeshes,setEngineMeshes]=useState<Record<string,IfcMesh[]>>({});
+  const [roofOn,setRoofOn]=useState(false);
   const meshes=useMemo(()=>houseMeshes(house),[house]);
   const layout=useMemo(()=>layoutHouse(house),[house]);
   const current=house.rooms.find(e=>e.id===active)??house.rooms[0];
@@ -25,14 +29,15 @@ export default function RoomEditor(){
     const {width,depth,height,thickness,doorWidth,doorHeight,doorOffset,windowWidth,windowHeight,windowOffset,sill}=room;
     setEngineStatus('Calculando no motor IFC...');
     const timer=setTimeout(()=>{
-      computeRoomMeshes({width,depth,height,thickness,doorWidth,doorHeight,doorOffset,windowWidth,windowHeight,windowOffset,sill}).then(result=>{
+      const roof=roofOn?{slope:.6,slopedEdges:['north','south','east','west'] as ('north'|'south'|'east'|'west')[]}:undefined;
+      computeRoomMeshes({width,depth,height,thickness,doorWidth,doorHeight,doorOffset,windowWidth,windowHeight,windowOffset,sill},roof).then(result=>{
         const shifted=result.map(m=>({...m,vertices:m.vertices.map(([x,y,z])=>[x+entry.center,y,z])}));
         setEngineMeshes(prev=>({...prev,[roomId]:shifted}));
         setEngineStatus('Motor IFC atualizado.');
       }).catch(e=>setEngineStatus('Erro no motor: '+(e as Error).message));
     },250);
     return ()=>clearTimeout(timer);
-  },[engineOn,current.id,room.width,room.depth,room.height,room.thickness,room.doorWidth,room.doorHeight,room.doorOffset,room.windowWidth,room.windowHeight,room.windowOffset,room.sill,layout]);
+  },[engineOn,roofOn,current.id,room.width,room.depth,room.height,room.thickness,room.doorWidth,room.doorHeight,room.doorOffset,room.windowWidth,room.windowHeight,room.windowOffset,room.sill,layout]);
   const displayMeshes=useMemo(()=>{
     if(!engineOn||!Object.keys(engineMeshes).length)return meshes;
     const engineIds=new Set(Object.keys(engineMeshes).flatMap(roomId=>['P01','P02','P03','P04','D01','J01'].map(w=>`${roomId}:${w}`)));
@@ -46,6 +51,12 @@ export default function RoomEditor(){
   function save(){try{localStorage.setItem('brabim-house-v1',serializeHouse(house));setMessage('Projeto salvo neste navegador. Exporte um arquivo para compartilhar.');}catch{setMessage('Não foi possível salvar neste navegador. Use Exportar arquivo.');}}
   function restore(){try{const text=localStorage.getItem('brabim-house-v1')??localStorage.getItem('brabim-room-v1');if(!text)throw Error('Nenhum projeto salvo neste navegador.');apply(()=>parseHouse(text));setReset(v=>v+1);}catch(e){setMessage((e as Error).message);}}
   function download(){const url=URL.createObjectURL(new Blob([serializeHouse(house)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='projeto.brabim.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setMessage('Arquivo do projeto preparado para download.');}
+  function downloadDebug(){
+    const payload={geradoEm:new Date().toISOString(),cômodoAtivo:current.id,motorReal:engineOn,telhado:roofOn,parâmetrosDoCômodo:room,malhasExibidas:displayMeshes};
+    const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
+    const a=document.createElement('a');a.href=url;a.download='brabim-depuracao.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    setMessage('Dados de depuração exportados (vértices/faces reais na tela).');
+  }
   const items=[...new Set(meshes.map(m=>m.id))].filter(id=>id.split(':').includes(current.id));
   const area=house.rooms.reduce((sum,e)=>sum+e.room.width*e.room.depth,0);
   function name(id:string){if(id.startsWith('shared:'))return 'Parede compartilhada';if(id.startsWith('link:'))return 'Porta de ligação';return elementNames[id.split(':')[1]]??id;}
@@ -56,7 +67,18 @@ export default function RoomEditor(){
       <button disabled={!history.length} onClick={()=>{const previous=history.at(-1)!;setHouse(previous);setActive(previous.rooms[0].id);select(`${previous.rooms[0].id}:F01`);setHistory(h=>h.slice(0,-1));setReset(v=>v+1);setMessage('Última alteração desfeita.');}}>Desfazer</button><button onClick={()=>setReset(v=>v+1)}>Enquadrar 3D</button>
       <input ref={input} hidden type="file" accept=".json" onChange={async e=>{const file=e.target.files?.[0];if(file)try{if(file.size>100000)throw Error('Arquivo muito grande.');const text=await file.text();apply(()=>parseHouse(text));setReset(v=>v+1);}catch(error){setMessage((error as Error).message);}e.target.value='';}}/>
       {isEngineAvailable()&&<label style={{display:'flex',alignItems:'center',gap:'.4em',marginLeft:'auto'}}><input type="checkbox" checked={engineOn} onChange={e=>{setEngineOn(e.target.checked);if(!e.target.checked)setEngineStatus('');}}/>Motor real (IFC) · {current.name}{engineStatus?` · ${engineStatus}`:''}</label>}
+      {isEngineAvailable()&&engineOn&&<label style={{display:'flex',alignItems:'center',gap:'.4em'}}><input type="checkbox" checked={roofOn} onChange={e=>setRoofOn(e.target.checked)}/>Telhado (4 águas)</label>}
+      <button onClick={()=>setDebugOpen(v=>!v)} style={{marginLeft:isEngineAvailable()?undefined:'auto'}}>{debugOpen?'Fechar ferramentas':'Ferramentas de depuração'}</button>
     </div>
+    {debugOpen&&<div className="tools" style={{flexWrap:'wrap',background:'#fff8ec',borderTop:'1px solid #eadfc7'}}>
+      <label style={{display:'flex',alignItems:'center',gap:'.4em'}}><input type="checkbox" checked={wireframeOn} onChange={e=>setWireframeOn(e.target.checked)}/>Wireframe</label>
+      <label style={{display:'flex',alignItems:'center',gap:'.4em'}}><input type="checkbox" checked={sectionCutOn} onChange={e=>setSectionCutOn(e.target.checked)}/>Corte (metade frontal)</label>
+      <button onClick={downloadDebug}>Baixar dados de depuração (JSON)</button>
+      <button onClick={()=>setPickHistory([])} disabled={!pickHistory.length}>Limpar cliques</button>
+      {pickHistory.length>0&&<div style={{display:'flex',flexDirection:'column',gap:'.15em',fontSize:'.85em',fontFamily:'monospace'}}>
+        {pickHistory.map((p,i)=><span key={i}>#{pickHistory.length-i} x={p[0].toFixed(3)} y={p[1].toFixed(3)} altura={p[2].toFixed(3)}{i===0&&pickHistory[1]?` · dist. do #${pickHistory.length-1}=${Math.hypot(p[0]-pickHistory[1][0],p[1]-pickHistory[1][1],p[2]-pickHistory[1][2]).toFixed(3)}m`:''}</span>)}
+      </div>}
+    </div>}
     <div className="workspace"><aside className="properties"><h2>Ambientes · {house.rooms.length} de 8</h2>
       <section className="navigator">{house.rooms.map(e=><button key={e.id} className={current.id===e.id?'selected':''} onClick={()=>pick(`${e.id}:F01`)}>{e.name}<small>{(e.room.width*e.room.depth).toFixed(2)} m²</small></button>)}
         <button disabled={house.rooms.length>=8} onClick={()=>{try{const next=addHouseRoom(house);apply(()=>next,next.rooms.at(-1)!.id);}catch(e){setMessage((e as Error).message);}}}>+ Cômodo à direita</button>
@@ -80,7 +102,7 @@ export default function RoomEditor(){
         </g>)}
         {layout.rooms.map(e=><g key={e.id} onClick={()=>pick(`${e.id}:F01`)} style={{cursor:'pointer'}}><text x={e.center} y="-.15" fontSize=".22" textAnchor="middle" fill="#425d6d">{e.name}</text><text x={e.center} y=".2" fontSize=".18" textAnchor="middle" fill="#687e8d">{e.room.width.toFixed(2)} × {d.toFixed(2)} m</text></g>)}
       </svg></section>}
-      {view!=='plan'&&<section className="view three"><Viewport walls={[]} meshes={displayMeshes} selected={selected} onSelect={pick} reset={reset} hideFloor/><div className="view-caption">Arraste para orbitar · roda para aproximar</div></section>}
-    </div></div></div><footer><span role="status">{message}</span><span className="footer-right">Geometria demonstrativa · sem recálculo IFC</span></footer>
+      {view!=='plan'&&<section className="view three"><Viewport walls={[]} meshes={displayMeshes} selected={selected} onSelect={pick} onPick={onPick} reset={reset} hideFloor wireframe={wireframeOn} sectionCut={sectionCutOn}/><div className="view-caption">Arraste para orbitar · roda para aproximar · clique num elemento mostra a coordenada exata (abra "Ferramentas de depuração")</div></section>}
+    </div></div></div><footer><span role="status">{message}</span><span className="footer-right">{pickHistory[0]?`Último clique: x=${pickHistory[0][0].toFixed(3)} y=${pickHistory[0][1].toFixed(3)} z(altura)=${pickHistory[0][2].toFixed(3)}`:'Geometria demonstrativa · sem recálculo IFC'}</span></footer>
   </main>;
 }

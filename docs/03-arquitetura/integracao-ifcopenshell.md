@@ -1,6 +1,6 @@
 # Integração do IfcOpenShell
 
-**Data:** 08-09/09/2026. **Status:** integrado ao app desktop real (não mais só experimento) para o retângulo básico de um ambiente; ambientes conectados e aberturas continuam com geometria demonstrativa.
+**Data:** 08-10/09/2026. **Status:** integrado ao app desktop real (não mais só experimento) para o retângulo básico de um ambiente, incluindo porta, janela e telhado; ambientes conectados continuam com geometria demonstrativa.
 
 ## Resultado do primeiro experimento
 
@@ -33,6 +33,12 @@ Deixou de ser só experimento isolado: `prototipo/src-tauri/` empacota a interfa
 Porta e janela também passaram a ser cortes reais: `worker.py` usa `ifcopenshell.api.feature.add_feature` (um `IfcOpeningElement` que voida a parede por booleana) para abrir o vão de verdade na geometria, na posição e altura definidas pelo usuário — não mais uma composição de caixas como no demonstrativo. Testado com os valores padrão (porta a 1 m com 0,9 m de largura; janela a 2 m com 1,2 m de largura e peitoril 1 m): o vão aparece corretamente na planta (dividida em dois segmentos ao redor do vão) e como furo real no 3D.
 
 Escopo ainda restante: só o retângulo de 4 paredes do ambiente ativo, com porta e janela (o mesmo caso validado no [experimento de empacotamento](../../experiments/desktop-sidecar/README.md)). Ainda não integrados ao motor: piso, moldura/acabamento decorativo ao redor do vão (removido da planta quando o motor está ligado, por ficar dessincronizado do corte real), paredes compartilhadas entre ambientes conectados e portas de ligação. Ligar um segundo ambiente ao motor hoje mostraria paredes duplicadas na fronteira compartilhada, já que o motor ainda não sabe que dois ambientes são vizinhos. A função `add_opening` do worker também assume paredes paralelas aos eixos do mundo (válido para o retângulo atual, não generalizado para ângulos livres).
+
+## Telhado real e painel de depuração (10/09/2026)
+
+O `worker.py` passou a calcular também o telhado do ambiente ativo por interseção de semi-espaços OCCT (mecanismo já validado, ver [decisão 0008](../04-decisoes/0008-telhado-por-interseccao-de-planos.md)), ligado por um campo "Telhado (4 águas)" na interface — hoje com inclinação e beiral fixos (`{slope:.6, slopedEdges:['north','south','east','west'], overhang:.5}` em `room-editor.tsx`, sem controle de UI ainda). O sólido é modelado como uma casca de espessura real (dois sólidos subtraídos, não um corte plano único) para não deixar a parede aparecer por dentro do telhado nem apagar o beiral.
+
+Dois bugs de alinhamento entre parede e telhado apareceram e foram corrigidos nessa integração — detalhados na [decisão 0008](../04-decisoes/0008-telhado-por-interseccao-de-planos.md#integração-real-no-app-e-dois-bugs-de-alinhamento-10092026). Ambos só foram diagnosticados com precisão graças a um **painel de ferramentas de depuração** construído nesta sessão (coordenadas por clique no 3D, exportação de vértices/faces em JSON, wireframe, corte de seção) — ver a mesma decisão para detalhes. Esse painel fica disponível a qualquer momento no editor, não é específico de telhado, e deve seguir útil para futuros bugs de geometria.
 
 ## Validação prevista
 

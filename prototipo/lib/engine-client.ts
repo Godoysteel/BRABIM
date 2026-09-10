@@ -6,6 +6,7 @@ import type {Room} from '@/lib/room';
 // on the web prototype (GitHub Pages) this stays inert. Field names match
 // Room exactly so the app's own room object can be sent as-is.
 export type EngineRoomParams = Pick<Room,'width'|'depth'|'height'|'thickness'|'doorWidth'|'doorHeight'|'doorOffset'|'windowWidth'|'windowHeight'|'windowOffset'|'sill'>;
+export type EngineRoofParams = {slope: number; slopedEdges: ('north'|'south'|'east'|'west')[]};
 
 type Pending = {resolve: (meshes: IfcMesh[]) => void; reject: (error: Error) => void};
 
@@ -39,11 +40,11 @@ async function getChild() {
   return childPromise;
 }
 
-export async function computeRoomMeshes(room: EngineRoomParams): Promise<IfcMesh[]> {
+export async function computeRoomMeshes(room: EngineRoomParams, roof?: EngineRoofParams): Promise<IfcMesh[]> {
   const child = await getChild();
   const id = nextId++;
   return new Promise((resolve, reject) => {
     pending.set(id, {resolve, reject});
-    child.write(JSON.stringify({id, room}) + '\n').catch(reject);
+    child.write(JSON.stringify({id, room, roof}) + '\n').catch(reject);
   });
 }
