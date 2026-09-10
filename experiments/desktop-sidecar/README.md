@@ -4,7 +4,7 @@ Executado em 08/09/2026. Com a plataforma confirmada como desktop ([decisão 000
 
 ## Abordagem
 
-`worker.py` sobe o IfcOpenShell uma vez (pagando o custo de import só na inicialização) e depois fica lendo requisições em JSON, uma por linha, via stdin, respondendo em JSON via stdout — em vez de abrir um processo Python novo a cada edição do usuário. Recebe parâmetros reais de um cômodo (`{room: {width, depth, height, thickness}}`) e monta um retângulo de 4 paredes com os 4 cantos conectados, devolvendo vértices/faces de cada parede — não mais um cenário fixo de teste (essa evolução foi validada de ponta a ponta no [experimento Tauri](../tauri-sidecar/README.md), com a interface editando e vendo o resultado mudar em tempo real).
+`worker.py` sobe o IfcOpenShell uma vez (pagando o custo de import só na inicialização) e depois fica lendo requisições em JSON, uma por linha, via stdin, respondendo em JSON via stdout — em vez de abrir um processo Python novo a cada edição do usuário. Recebe parâmetros reais de um cômodo (`{room: {width, depth, height, thickness, doorWidth, doorHeight, doorOffset, windowWidth, windowHeight, windowOffset, sill}}`) e monta um retângulo de 4 paredes com os 4 cantos conectados, cortando vãos reais de porta e janela via `ifcopenshell.api.feature.add_feature` (booleana de verdade, não caixas compostas), devolvendo vértices/faces de cada parede já com os furos — não mais um cenário fixo de teste. Essa evolução (incluindo porta/janela) foi integrada de ponta a ponta no app real do BRABIM (`prototipo/src-tauri/`, ver [integração](../../docs/03-arquitetura/integracao-ifcopenshell.md)) e validada primeiro no [experimento Tauri isolado](../tauri-sidecar/README.md).
 
 Empacotado com PyInstaller (`--onefile --collect-all ifcopenshell`).
 

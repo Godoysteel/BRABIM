@@ -1,9 +1,11 @@
 import type {IfcMesh} from '@/app/viewport';
+import type {Room} from '@/lib/room';
 
 // Talks to the IfcOpenShell sidecar (see experiments/desktop-sidecar,
 // experiments/tauri-sidecar). Only available inside the Tauri desktop app;
-// on the web prototype (GitHub Pages) this stays inert.
-export type EngineRoomParams = {width: number; depth: number; height: number; thickness: number};
+// on the web prototype (GitHub Pages) this stays inert. Field names match
+// Room exactly so the app's own room object can be sent as-is.
+export type EngineRoomParams = Pick<Room,'width'|'depth'|'height'|'thickness'|'doorWidth'|'doorHeight'|'doorOffset'|'windowWidth'|'windowHeight'|'windowOffset'|'sill'>;
 
 type Pending = {resolve: (meshes: IfcMesh[]) => void; reject: (error: Error) => void};
 

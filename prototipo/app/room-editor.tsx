@@ -22,20 +22,20 @@ export default function RoomEditor(){
   useEffect(()=>{
     if(!engineOn)return;
     const roomId=current.id, entry=layout.rooms.find(e=>e.id===roomId); if(!entry)return;
-    const params={width:room.width,depth:room.depth,height:room.height,thickness:room.thickness};
+    const {width,depth,height,thickness,doorWidth,doorHeight,doorOffset,windowWidth,windowHeight,windowOffset,sill}=room;
     setEngineStatus('Calculando no motor IFC...');
     const timer=setTimeout(()=>{
-      computeRoomMeshes(params).then(result=>{
+      computeRoomMeshes({width,depth,height,thickness,doorWidth,doorHeight,doorOffset,windowWidth,windowHeight,windowOffset,sill}).then(result=>{
         const shifted=result.map(m=>({...m,vertices:m.vertices.map(([x,y,z])=>[x+entry.center,y,z])}));
         setEngineMeshes(prev=>({...prev,[roomId]:shifted}));
         setEngineStatus('Motor IFC atualizado.');
       }).catch(e=>setEngineStatus('Erro no motor: '+(e as Error).message));
     },250);
     return ()=>clearTimeout(timer);
-  },[engineOn,current.id,room.width,room.depth,room.height,room.thickness,layout]);
+  },[engineOn,current.id,room.width,room.depth,room.height,room.thickness,room.doorWidth,room.doorHeight,room.doorOffset,room.windowWidth,room.windowHeight,room.windowOffset,room.sill,layout]);
   const displayMeshes=useMemo(()=>{
     if(!engineOn||!Object.keys(engineMeshes).length)return meshes;
-    const engineIds=new Set(Object.keys(engineMeshes).flatMap(roomId=>['P01','P02','P03','P04'].map(w=>`${roomId}:${w}`)));
+    const engineIds=new Set(Object.keys(engineMeshes).flatMap(roomId=>['P01','P02','P03','P04','D01','J01'].map(w=>`${roomId}:${w}`)));
     return [...meshes.filter(m=>!engineIds.has(m.id)),...Object.entries(engineMeshes).flatMap(([roomId,rm])=>rm.map(m=>({...m,id:`${roomId}:${m.id}`,guid:m.guid})))];
   },[meshes,engineOn,engineMeshes]);
   function pick(id:string){select(id);const owner=id.startsWith('shared:')||id.startsWith('link:')?id.split(':')[1]:id.split(':')[0];setActive(owner);}
@@ -70,7 +70,10 @@ export default function RoomEditor(){
     <div className={`views ${view==='split'?'split':''}`}>
       {view!=='3d'&&<section className="view plan"><div className="view-title">Planta · {current.name}</div><svg ref={planRef} className="plan-svg" viewBox={`${-layout.width/2-t-1} ${-d/2-t-1} ${layout.width+2*t+2} ${d+2*t+2}`} aria-label="Planta dos ambientes conectados" onPointerMove={moveDrag} onPointerUp={endDrag}>
         {layout.rooms.map(e=><rect key={e.id} x={e.left} y={-d/2} width={e.room.width} height={d} fill={current.id===e.id?'#e1eff6':'#f2f4f5'} onClick={()=>pick(`${e.id}:F01`)}/>)}
-        {displayMeshes.map((m,i)=>{const zs=m.vertices.map(v=>v[2]);if(Math.min(...zs)>1.2||Math.max(...zs)<1.2)return null;const xs=m.vertices.map(v=>v[0]),ys=m.vertices.map(v=>-v[1]);const opening=m.id.includes(':D01')||m.id.includes(':J01')||m.id.startsWith('link:');return <rect key={i} x={Math.min(...xs)} y={Math.min(...ys)} width={Math.max(...xs)-Math.min(...xs)} height={Math.max(...ys)-Math.min(...ys)} fill={selected===m.id?'#168ac0':opening?'#a38b6b':'#657a88'} onClick={()=>pick(m.id)}/>;})}
+        {displayMeshes.flatMap((m,i)=>{const zs=m.vertices.map(v=>v[2]);if(Math.min(...zs)>1.2||Math.max(...zs)<1.2)return[];const xs=m.vertices.map(v=>v[0]),ys=m.vertices.map(v=>-v[1]);const opening=m.id.includes(':D01')||m.id.includes(':J01')||m.id.startsWith('link:');const fill=selected===m.id?'#168ac0':opening?'#a38b6b':'#657a88';
+          const [roomId,part]=m.id.split(':');const engineRoom=engineMeshes[roomId]&&house.rooms.find(r=>r.id===roomId)?.room;
+          if(engineRoom&&(part==='P01'||part==='P02')){const entry=layout.rooms.find(e=>e.id===roomId)!;const {offset,width}=part==='P01'?{offset:engineRoom.windowOffset,width:engineRoom.windowWidth}:{offset:engineRoom.doorOffset,width:engineRoom.doorWidth};const gapLeft=entry.center-engineRoom.width/2+offset,gapRight=gapLeft+width,minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);return[<rect key={`${i}a`} x={minX} y={minY} width={gapLeft-minX} height={maxY-minY} fill={fill} onClick={()=>pick(m.id)}/>,<rect key={`${i}b`} x={gapRight} y={minY} width={maxX-gapRight} height={maxY-minY} fill={fill} onClick={()=>pick(m.id)}/>];}
+          return[<rect key={i} x={Math.min(...xs)} y={Math.min(...ys)} width={Math.max(...xs)-Math.min(...xs)} height={Math.max(...ys)-Math.min(...ys)} fill={fill} onClick={()=>pick(m.id)}/>];})}
         {layout.rooms.map(e=><g key={`${e.id}-drag`}>
           <rect x={e.left} y={d/2} width={e.room.width} height={t} fill="transparent" style={{cursor:'ew-resize',touchAction:'none'}} pointerEvents="all" onPointerDown={ev=>beginDrag(ev,e.id,'doorOffset',e.room.doorWidth)}/>
           <rect x={e.left} y={-d/2-t} width={e.room.width} height={t} fill="transparent" style={{cursor:'ew-resize',touchAction:'none'}} pointerEvents="all" onPointerDown={ev=>beginDrag(ev,e.id,'windowOffset',e.room.windowWidth)}/>

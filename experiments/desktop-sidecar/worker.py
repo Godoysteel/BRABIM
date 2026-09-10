@@ -4,14 +4,36 @@ the ifcopenshell import/startup cost once, at launch.
 """
 import sys, json, time
 import ifcopenshell, ifcopenshell.api as api, ifcopenshell.geom
+from ifcopenshell.api.geometry.add_wall_representation import add_wall_representation
 import numpy as np
 
-def build_room(width, depth, height, thickness):
+def add_opening(f, body, wall, axis_origin, along_offset, width, height, sill, wall_thickness):
+    """Cuts a void into `wall` at `along_offset` (distance from the wall's
+    start point, matching the app's doorOffset/windowOffset convention),
+    `sill` above the floor. Assumes the wall runs along world X and starts
+    at `axis_origin` (true for the north/south walls of build_room; not a
+    general solution for arbitrary wall angles).
+    """
+    if width <= 0 or height <= 0:
+        return
+    opening = api.run('root.create_entity', f, ifc_class='IfcOpeningElement')
+    # Thicker than the wall itself so the boolean cut has no float-precision gaps.
+    opening_thickness = wall_thickness + 0.3
+    rep = add_wall_representation(f, context=body, length=width, height=height, thickness=opening_thickness)
+    api.run('geometry.assign_representation', f, product=opening, representation=rep)
+    mat = np.eye(4)
+    mat[0, 3] = axis_origin[0] + along_offset
+    mat[1, 3] = axis_origin[1] - opening_thickness / 2
+    mat[2, 3] = sill
+    api.run('geometry.edit_object_placement', f, product=opening, matrix=mat)
+    api.run('feature.add_feature', f, feature=opening, element=wall)
+
+def build_room(width, depth, height, thickness, door=None, window=None):
     w, d, h, t = width, depth, height, thickness
     # Rectangle loop: north, south, west, east walls, joined at all 4 corners.
     base = [
-        ((-w/2, d/2), (w/2, d/2)),   # P01 north
-        ((-w/2, -d/2), (w/2, -d/2)), # P02 south
+        ((-w/2, d/2), (w/2, d/2)),   # P01 north (window wall)
+        ((-w/2, -d/2), (w/2, -d/2)), # P02 south (door wall)
         ((-w/2, -d/2), (-w/2, d/2)), # P03 west
         ((w/2, -d/2), (w/2, d/2)),   # P04 east
     ]
@@ -22,7 +44,7 @@ def build_room(width, depth, height, thickness):
     unit = api.run('unit.add_si_unit', f, unit_type='LENGTHUNIT')
     api.run('unit.assign_unit', f, units=[unit])
     model = api.run('context.add_context', f, context_type='Model')
-    api.run('context.add_context', f, context_type='Model', context_identifier='Body', target_view='MODEL_VIEW', parent=model)
+    body = api.run('context.add_context', f, context_type='Model', context_identifier='Body', target_view='MODEL_VIEW', parent=model)
     plan = api.run('context.add_context', f, context_type='Plan')
     axis = api.run('context.add_context', f, context_type='Plan', context_identifier='Axis', target_view='GRAPH_VIEW', parent=plan)
     storey = api.run('root.create_entity', f, ifc_class='IfcBuildingStorey', name='Terreo')
@@ -49,6 +71,11 @@ def build_room(width, depth, height, thickness):
     for wall in walls:
         api.run('geometry.regenerate_wall_representation', f, wall=wall, height=h)
 
+    if door:
+        add_opening(f, body, walls[1], base[1][0], door['offset'], door['width'], door['height'], 0, t)
+    if window:
+        add_opening(f, body, walls[0], base[0][0], window['offset'], window['width'], window['height'], window['sill'], t)
+
     settings = ifcopenshell.geom.settings(); settings.set(settings.USE_WORLD_COORDS, True)
     meshes = []
     for wall in walls:
@@ -73,6 +100,8 @@ def main():
                 depth=float(room.get('depth', 4)),
                 height=float(room.get('height', 2.8)),
                 thickness=float(room.get('thickness', .2)),
+                door={'offset': float(room['doorOffset']), 'width': float(room['doorWidth']), 'height': float(room['doorHeight'])} if 'doorOffset' in room else None,
+                window={'offset': float(room['windowOffset']), 'width': float(room['windowWidth']), 'height': float(room['windowHeight']), 'sill': float(room.get('sill', 1))} if 'windowOffset' in room else None,
             )
             print(json.dumps({'type': 'result', 'id': req.get('id'), 'elapsed_seconds': round(time.perf_counter() - t0, 3), 'meshes': meshes}), flush=True)
         except Exception as e:
