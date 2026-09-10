@@ -1,6 +1,6 @@
 # 0008 — Telhado por interseção de planos (mecanismo do Revit), não straight skeleton
 
-**Data:** 09/09/2026. **Status:** hipótese geométrica e caminho de integração com o motor real ambos validados por experimento; não integrada ao produto.
+**Data:** 09/09/2026. **Status:** geometria, empacotamento e ponte para IFC real todos validados por experimento; não integrada ao produto (falta trabalho de produto, não de viabilidade técnica).
 
 ## Contexto
 
@@ -22,8 +22,10 @@ Esta era inicialmente uma validação geométrica isolada, sem resposta para com
 
 Ponto de atenção descoberto e parcialmente resolvido: a instalação padrão de `cadquery-ocp` traz VTK (~314 MB) e matplotlib (~33 MB) como dependências. Investigação mostrou que matplotlib e o pacote Python do VTK não são de fato necessários — o OCP só precisa que a pasta de DLLs nativas do VTK (`vtk.libs`, ~264 MB) exista no disco, por causa de linkagem binária, não por uso real dessas bibliotecas. Testado com `--exclude-module` no PyInstaller: o executável final ficou em **250 MB** (contra 71 MB sem telhado), funcionando corretamente — bem menor que os ~450 MB que seriam sem essa exclusão, mas ainda um salto grande, já que as DLLs nativas do VTK continuam sendo custo fixo enquanto o `cadquery-ocp` depender delas.
 
-Ainda falta: converter o sólido do OCCT em uma entidade IFC real (`IfcRoof`) dentro do arquivo que o `ifcopenshell` já monta — não há uma ponte direta documentada entre `TopoDS_Shape` e uma representação IFC, provavelmente exigindo triangular o sólido e construir a representação a partir de vértices/faces. Também falta extrair a malha para desenho na viewport e testar contornos não retangulares (L, reentrâncias) e telhados com águas de inclinações diferentes entre si.
+Um [terceiro experimento](../../experiments/desktop-sidecar/roof-to-ifc.README.md) fechou a última lacuna técnica: não há ponte direta documentada entre `TopoDS_Shape` (OCCT) e uma representação IFC, mas não precisa — basta triangular o sólido (mesma técnica do experimento em JS) e entregar vértices/triângulos para `ifcopenshell.api.geometry.add_mesh_representation`, que monta a representação sozinho. Testado de ponta a ponta: sólido do telhado calculado pelo OCP virou uma entidade `IfcRoof` de verdade, escrita num arquivo `.ifc` válido (IFC4, `IfcPolygonalFaceSet`), e relida corretamente pelo motor de geometria do próprio `ifcopenshell` — altura da cumeeira bateu exatamente com o esperado (3 m de beiral + inclinação até 4,5 m).
+
+O que resta agora é trabalho de produto, não mais dúvida de viabilidade técnica: decidir o contorno a partir do modelo de ambientes do BRABIM em vez de um retângulo fixo de teste, expor os controles de inclinação por aresta na interface, testar contornos não retangulares (L, reentrâncias) e águas com inclinações diferentes entre si, e resolver o peso do instalador (~250 MB) antes de considerar isso pronto.
 
 ## Referências
 
-[Experimento de validação (JS/WASM)](../../experiments/opencascade-wasm/roof.README.md) · [Experimento de integração (Python/OCP + IfcOpenShell)](../../experiments/desktop-sidecar/roof-ocp.README.md) · [Decisão 0005 — OCCT para paredes](0005-occt-wasm-para-encontros.md) · [Decisão 0006 — motor nativo desktop](0006-plataforma-desktop-e-retorno-ifcopenshell.md)
+[Experimento de validação (JS/WASM)](../../experiments/opencascade-wasm/roof.README.md) · [Experimento de integração (Python/OCP + IfcOpenShell)](../../experiments/desktop-sidecar/roof-ocp.README.md) · [Experimento da ponte para IFC real](../../experiments/desktop-sidecar/roof-to-ifc.README.md) · [Decisão 0005 — OCCT para paredes](0005-occt-wasm-para-encontros.md) · [Decisão 0006 — motor nativo desktop](0006-plataforma-desktop-e-retorno-ifcopenshell.md)
