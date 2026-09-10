@@ -11,6 +11,7 @@ Use arquivos no padrão `NNNN-titulo.md`, com número sequencial. Cada registro 
 - [0005 — OCCT via WASM como hipótese principal para encontros de parede](0005-occt-wasm-para-encontros.md)
 - [0006 — Plataforma desktop confirmada; motor volta a ser IfcOpenShell nativo](0006-plataforma-desktop-e-retorno-ifcopenshell.md)
 - [0007 — Público prioritário: estudante; modelo comercial confirmado](0007-publico-estudante-comercial.md)
+- [0008 — Telhado por interseção de planos (mecanismo do Revit), não straight skeleton](0008-telhado-por-interseccao-de-planos.md)
 
 Os princípios iniciais estão no [documento mestre](../00-visao/documento-mestre.md). Cada registro diferencia direção aprovada de implementação concluída.
 
