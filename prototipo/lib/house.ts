@@ -1,5 +1,8 @@
 import {initialRoom, parseRoom, validateRoom, type Room} from './room.ts';
-export type HouseRoom = {id:string; name:string; room:Room};
+export type WallLayer = {material:string; thickness:number};
+export type WallId = 'P01'|'P02'|'P03'|'P04';
+export type WallLayers = Partial<Record<WallId, WallLayer[]>>;
+export type HouseRoom = {id:string; name:string; room:Room; wallLayers?:WallLayers};
 export type House = {rooms:HouseRoom[]};
 export const initialHouse:House = {rooms:[{id:'r1',name:'Ambiente 01',room:{...initialRoom}}]};
 export const commonKeys = ['depth','height','thickness','floor'] as const;
@@ -13,6 +16,13 @@ export function validateHouse(h:House):House {
     if(!entry.room || Object.keys(initialRoom).some(k=>typeof entry.room[k as keyof Room]!=='number')) throw Error('Medidas do cômodo incompletas.');
     validateRoom(entry.room);
     if(commonKeys.some(k=>entry.room[k]!==h.rooms[0].room[k])) throw Error('Profundidade, altura, parede e piso devem ser iguais no conjunto.');
+    if(entry.wallLayers!==undefined){
+      if(typeof entry.wallLayers!=='object'||entry.wallLayers===null) throw Error('Camadas de parede inválidas.');
+      for(const list of Object.values(entry.wallLayers)){
+        if(!Array.isArray(list)) throw Error('Camadas de parede inválidas.');
+        for(const layer of list) if(typeof layer?.material!=='string'||!layer.material.trim()||layer.material.length>30||typeof layer.thickness!=='number'||!(layer.thickness>0)||layer.thickness>0.5) throw Error('Cada camada precisa de material (até 30 caracteres) e espessura de 0 a 0,50 m.');
+      }
+    }
   }
   return h;
 }
@@ -25,6 +35,9 @@ export function layoutHouse(h:House){
 }
 export function updateHouseRoom(h:House,id:string,key:keyof Room,value:number):House {
   return validateHouse({rooms:h.rooms.map(e=>e.id===id || (commonKeys as readonly string[]).includes(key)?{...e,room:{...e.room,[key]:value}}:e)});
+}
+export function updateWallLayers(h:House,roomId:string,wallId:WallId,layers:WallLayer[]):House {
+  return validateHouse({rooms:h.rooms.map(e=>e.id===roomId?{...e,wallLayers:{...e.wallLayers,[wallId]:layers}}:e)});
 }
 export function addHouseRoom(h:House):House {
   const id=`r${Math.max(0,...h.rooms.map(e=>Number(e.id.slice(1))||0))+1}`;

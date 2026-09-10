@@ -15,7 +15,7 @@ from OCP.BRepMesh import BRepMesh_IncrementalMesh
 from OCP.BRep import BRep_Tool
 from OCP.TopLoc import TopLoc_Location
 from OCP.TopExp import TopExp_Explorer
-from OCP.TopAbs import TopAbs_FACE, TopAbs_SHAPE
+from OCP.TopAbs import TopAbs_FACE, TopAbs_SHAPE, TopAbs_REVERSED
 from OCP.TopoDS import TopoDS
 
 
@@ -26,11 +26,24 @@ def _sloped_half_space(p, inward, slope, keep_point):
 
 
 def _triangulate_occt(solid):
+    """Triangulates every face of an OCCT solid into a flat vertex/face
+    list. A face's stored triangulation always winds the same way as its
+    underlying surface -- when the face itself is TopAbs_REVERSED (which
+    a boolean like Cut or Common routinely produces for some faces of
+    the result, not just a whole-shape flip), the correct outward
+    winding needs two of the three indices swapped, or that face's
+    normal points inward. Three.js renders single-sided by default, so
+    an unswapped reversed face doesn't look subtly wrong -- it's just
+    not there from most angles, e.g. a window cut through a thin wall
+    layer where only some of the frame's faces reversed showed up as a
+    piece of the frame missing/floating instead of a solid opening.
+    """
     BRepMesh_IncrementalMesh(solid, 0.05, False, 0.3, False)
     vertices, faces = [], []
     exp = TopExp_Explorer(solid, TopAbs_FACE, TopAbs_SHAPE)
     while exp.More():
         face = TopoDS.Face(exp.Current())
+        reversed_face = face.Orientation() == TopAbs_REVERSED
         loc = TopLoc_Location()
         tri = BRep_Tool.Triangulation_s(face, loc)
         if tri is not None:
@@ -41,6 +54,8 @@ def _triangulate_occt(solid):
                 vertices.append((p.X(), p.Y(), p.Z()))
             for i in range(1, tri.NbTriangles() + 1):
                 a, b, c = tri.Triangle(i).Get()
+                if reversed_face:
+                    a, b = b, a
                 faces.append((base + a - 1, base + b - 1, base + c - 1))
         exp.Next()
     return vertices, faces
@@ -144,6 +159,76 @@ def attach_wall_to_roof(f, body, storey, name, inner, a, b, thickness, eave_heig
     api.run('geometry.edit_object_placement', f, product=wall)
     return wall
 
+_WALL_OUTWARD = {0: (0, 1), 1: (0, -1), 2: (-1, 0), 3: (1, 0)}  # north, south, west, east
+
+
+def _wall_layer_solids(a, b, layers, outward, height):
+    """One thin OCCT box per layer, stacked along the wall's own
+    thickness axis from the room-facing side outward -- `layers` is
+    ordered inside to outside, e.g. [('Reboco interno',.02),
+    ('Tijolo',.09),('Reboco externo',.025)]. Each box is extended past
+    the wall's own ends by half the thickest layer, the same corner
+    overlap trick as _wall_cap, so a corner never shows a sliver gap
+    between two walls' layers.
+    """
+    ax, ay = a; bx, by = b
+    ox, oy = outward
+    total = sum(t for _, t in layers)
+    pad = max((t for _, t in layers), default=0) / 2
+    solids, offset = [], -total / 2
+    for material, t in layers:
+        lo, hi = offset, offset + t
+        if ay == by:  # north/south wall: thickness runs along y
+            y0, y1 = sorted((ay + lo * oy, ay + hi * oy))
+            x0, x1 = sorted((ax, bx))
+            box = BRepPrimAPI_MakeBox(gp_Pnt(x0 - pad, y0, 0), gp_Pnt(x1 + pad, y1, height)).Shape()
+        else:  # east/west wall: thickness runs along x
+            x0, x1 = sorted((ax + lo * ox, ax + hi * ox))
+            y0, y1 = sorted((ay, by))
+            box = BRepPrimAPI_MakeBox(gp_Pnt(x0, y0 - pad, 0), gp_Pnt(x1, y1 + pad, height)).Shape()
+        solids.append((material, box))
+        offset = hi
+    return solids
+
+
+def _opening_box_world(axis_origin, along_offset, width, height, sill, thickness_pad):
+    """Same placement math as add_opening's matrix, but as a raw OCCT box
+    instead of an IfcOpeningElement -- used to cut the *layer* slabs
+    (add_opening only cuts the single parametric wall body, which the
+    layers replace visually). Only meaningful for the north/south walls,
+    the only ones build_room ever puts a door or window in.
+    """
+    x0 = axis_origin[0] + along_offset
+    x1 = x0 + width
+    y0 = axis_origin[1] - thickness_pad / 2
+    y1 = axis_origin[1] + thickness_pad / 2
+    return BRepPrimAPI_MakeBox(gp_Pnt(x0, y0, sill), gp_Pnt(x1, y1, sill + height)).Shape()
+
+
+def attach_wall_layers(f, body, storey, name, a, b, layers, outward, height, opening_box=None):
+    """Builds the layer slabs for one wall and returns their entities.
+    The wall itself (`name`, P01..P04) keeps its normal single-box IFC
+    representation for openings, corner joins and the roof attach --
+    these layer entities are additional, purely for showing the
+    sandwich; build_room skips exporting the plain wall's own mesh
+    once layers exist for it, so the two don't render on top of each
+    other.
+    """
+    entities = []
+    for material, box in _wall_layer_solids(a, b, layers, outward, height):
+        shape = BRepAlgoAPI_Cut(box, opening_box).Shape() if opening_box is not None else box
+        vertices, faces = _triangulate_occt(shape)
+        if not vertices:
+            continue
+        wall = api.run('root.create_entity', f, ifc_class='IfcWall', name=f'{name}-{material}')
+        api.run('spatial.assign_container', f, products=[wall], relating_structure=storey)
+        rep = api.run('geometry.add_mesh_representation', f, context=body, vertices=[vertices], faces=[faces])
+        api.run('geometry.assign_representation', f, product=wall, representation=rep)
+        api.run('geometry.edit_object_placement', f, product=wall)
+        entities.append((material, wall))
+    return entities
+
+
 def add_opening(f, body, wall, axis_origin, along_offset, width, height, sill, wall_thickness):
     """Cuts a void into `wall` at `along_offset` (distance from the wall's
     start point, matching the app's doorOffset/windowOffset convention),
@@ -165,7 +250,35 @@ def add_opening(f, body, wall, axis_origin, along_offset, width, height, sill, w
     api.run('geometry.edit_object_placement', f, product=opening, matrix=mat)
     api.run('feature.add_feature', f, feature=opening, element=wall)
 
-def build_room(width, depth, height, thickness, door=None, window=None, roof=None):
+# Lintel defaults -- common, not normative: 10 cm tall, bearing 15 cm past
+# each side of the opening so the beam actually rests on solid wall.
+# Adjustable later; not sourced from a specific standard.
+LINTEL_HEIGHT = 0.1
+LINTEL_BEARING = 0.15
+
+
+def add_lintel(f, body, storey, name, axis_origin, along_offset, width, z0, z1, wall_thickness, predefined_type, bearing=LINTEL_BEARING):
+    """A concrete beam spanning an opening: `verga` above it (predefined_type
+    'LINTEL') or `contraverga` below a window's sill (no matching
+    IfcBeamTypeEnum value exists for that, so it's just 'BEAM'). Reuses
+    the exact opening position/width already computed for the void cut --
+    extends `bearing` past each side so it actually rests on wall, not
+    just spans the hole.
+    """
+    x0 = axis_origin[0] + along_offset - bearing
+    x1 = x0 + width + 2 * bearing
+    y0 = axis_origin[1] - wall_thickness / 2
+    y1 = axis_origin[1] + wall_thickness / 2
+    box = BRepPrimAPI_MakeBox(gp_Pnt(x0, y0, z0), gp_Pnt(x1, y1, z1)).Shape()
+    vertices, faces = _triangulate_occt(box)
+    beam = api.run('root.create_entity', f, ifc_class='IfcBeam', name=name, predefined_type=predefined_type)
+    api.run('spatial.assign_container', f, products=[beam], relating_structure=storey)
+    rep = api.run('geometry.add_mesh_representation', f, context=body, vertices=[vertices], faces=[faces])
+    api.run('geometry.assign_representation', f, product=beam, representation=rep)
+    api.run('geometry.edit_object_placement', f, product=beam)
+    return beam
+
+def build_room(width, depth, height, thickness, door=None, window=None, roof=None, layers=None, contraverga=False):
     w, d, h, t = width, depth, height, thickness
     # Rectangle loop: north, south, west, east walls, joined at all 4 corners.
     base = [
@@ -199,8 +312,8 @@ def build_room(width, depth, height, thickness, door=None, window=None, roof=Non
         api.run('geometry.assign_representation', f, product=wall, representation=rep)
         material = f.create_entity('IfcMaterial', Name='Parede')
         layer = f.create_entity('IfcMaterialLayer', Material=material, LayerThickness=t, Priority=50)
-        layers = f.create_entity('IfcMaterialLayerSet', MaterialLayers=[layer])
-        usage = f.create_entity('IfcMaterialLayerSetUsage', ForLayerSet=layers, LayerSetDirection='AXIS2', DirectionSense='POSITIVE', OffsetFromReferenceLine=-t/2)
+        layer_set = f.create_entity('IfcMaterialLayerSet', MaterialLayers=[layer])
+        usage = f.create_entity('IfcMaterialLayerSetUsage', ForLayerSet=layer_set, LayerSetDirection='AXIS2', DirectionSense='POSITIVE', OffsetFromReferenceLine=-t/2)
         f.create_entity('IfcRelAssociatesMaterial', GlobalId=ifcopenshell.guid.new(), RelatedObjects=[wall], RelatingMaterial=usage)
         walls.append(wall)
     for a, b, ca, cb in links:
@@ -208,10 +321,37 @@ def build_room(width, depth, height, thickness, door=None, window=None, roof=Non
     for wall in walls:
         api.run('geometry.regenerate_wall_representation', f, wall=wall, height=h)
 
+    # Named VERGA-/CONTRAVERGA-prefixed (not P0X-suffixed) so they never
+    # collide with the P0X-<material> id scheme wall layers use -- the
+    # plan view's window/door gap-split logic keys off that "P0X-" prefix
+    # and would otherwise slice a lintel in half at the opening's gap.
+    lintel_entities = []
     if door:
         add_opening(f, body, walls[1], base[1][0], door['offset'], door['width'], door['height'], 0, t)
+        lintel_entities.append(add_lintel(f, body, storey, 'VERGA-P02', base[1][0], door['offset'], door['width'], door['height'], door['height'] + LINTEL_HEIGHT, t, 'LINTEL'))
     if window:
         add_opening(f, body, walls[0], base[0][0], window['offset'], window['width'], window['height'], window['sill'], t)
+        top = window['sill'] + window['height']
+        lintel_entities.append(add_lintel(f, body, storey, 'VERGA-P01', base[0][0], window['offset'], window['width'], top, top + LINTEL_HEIGHT, t, 'LINTEL'))
+        if contraverga:
+            lintel_entities.append(add_lintel(f, body, storey, 'CONTRAVERGA-P01', base[0][0], window['offset'], window['width'], window['sill'] - LINTEL_HEIGHT, window['sill'], t, 'BEAM'))
+
+    # Layer entities per wall -- each wall can carry its own sandwich
+    # (e.g. render only on the street-facing side), keyed by name so a
+    # wall with no entry just keeps its plain single-box representation.
+    # Openings cut through every layer of whichever wall has them.
+    layer_entities = {}
+    if layers:
+        opening_thickness_pad = t + 0.3
+        openings = {
+            'P01': _opening_box_world(base[0][0], window['offset'], window['width'], window['height'], window['sill'], opening_thickness_pad) if window else None,
+            'P02': _opening_box_world(base[1][0], door['offset'], door['width'], door['height'], 0, opening_thickness_pad) if door else None,
+        }
+        for i, (a, b) in enumerate(base):
+            name = f'P{i+1:02}'
+            wall_layers = layers.get(name)
+            if wall_layers:
+                layer_entities[name] = attach_wall_layers(f, body, storey, name, a, b, wall_layers, _WALL_OUTWARD[i], h, openings.get(name))
 
     roof_entity, cap_entities = None, []
     if roof:
@@ -236,10 +376,18 @@ def build_room(width, depth, height, thickness, door=None, window=None, roof=Non
     settings = ifcopenshell.geom.settings(); settings.set(settings.USE_WORLD_COORDS, True)
     meshes = []
     for wall in walls:
+        if wall.Name in layer_entities:
+            continue  # shown as its layer sandwich below instead of one slab
         shape = ifcopenshell.geom.create_shape(settings, wall)
         v = np.array(shape.geometry.verts).reshape(-1, 3)
         faces = np.array(shape.geometry.faces).reshape(-1, 3)
         meshes.append({'id': wall.Name, 'guid': wall.GlobalId, 'vertices': v.tolist(), 'faces': faces.tolist()})
+    for wall_entities in layer_entities.values():
+        for material, layer_wall in wall_entities:
+            shape = ifcopenshell.geom.create_shape(settings, layer_wall)
+            v = np.array(shape.geometry.verts).reshape(-1, 3)
+            faces = np.array(shape.geometry.faces).reshape(-1, 3)
+            meshes.append({'id': layer_wall.Name, 'guid': layer_wall.GlobalId, 'material': material, 'vertices': v.tolist(), 'faces': faces.tolist()})
     if roof_entity:
         shape = ifcopenshell.geom.create_shape(settings, roof_entity)
         v = np.array(shape.geometry.verts).reshape(-1, 3)
@@ -250,6 +398,11 @@ def build_room(width, depth, height, thickness, door=None, window=None, roof=Non
         v = np.array(shape.geometry.verts).reshape(-1, 3)
         faces = np.array(shape.geometry.faces).reshape(-1, 3)
         meshes.append({'id': cap.Name, 'guid': cap.GlobalId, 'vertices': v.tolist(), 'faces': faces.tolist()})
+    for beam in lintel_entities:
+        shape = ifcopenshell.geom.create_shape(settings, beam)
+        v = np.array(shape.geometry.verts).reshape(-1, 3)
+        faces = np.array(shape.geometry.faces).reshape(-1, 3)
+        meshes.append({'id': beam.Name, 'guid': beam.GlobalId, 'material': 'Concreto', 'vertices': v.tolist(), 'faces': faces.tolist()})
     return meshes
 
 def main():
@@ -270,6 +423,8 @@ def main():
                 door={'offset': float(room['doorOffset']), 'width': float(room['doorWidth']), 'height': float(room['doorHeight'])} if 'doorOffset' in room else None,
                 window={'offset': float(room['windowOffset']), 'width': float(room['windowWidth']), 'height': float(room['windowHeight']), 'sill': float(room.get('sill', 1))} if 'windowOffset' in room else None,
                 roof=req['roof'] if req.get('roof') else None,
+                layers={name: [(l['material'], float(l['thickness'])) for l in wl] for name, wl in req['wallLayers'].items()} if req.get('wallLayers') else None,
+                contraverga=bool(req.get('contraverga', False)),
             )
             print(json.dumps({'type': 'result', 'id': req.get('id'), 'elapsed_seconds': round(time.perf_counter() - t0, 3), 'meshes': meshes}), flush=True)
         except Exception as e:

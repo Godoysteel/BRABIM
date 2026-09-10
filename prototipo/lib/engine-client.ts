@@ -1,5 +1,6 @@
 import type {IfcMesh} from '@/app/viewport';
 import type {Room} from '@/lib/room';
+import type {WallLayers} from '@/lib/house';
 
 // Talks to the IfcOpenShell sidecar (see experiments/desktop-sidecar,
 // experiments/tauri-sidecar). Only available inside the Tauri desktop app;
@@ -40,11 +41,11 @@ async function getChild() {
   return childPromise;
 }
 
-export async function computeRoomMeshes(room: EngineRoomParams, roof?: EngineRoofParams): Promise<IfcMesh[]> {
+export async function computeRoomMeshes(room: EngineRoomParams, roof?: EngineRoofParams, wallLayers?: WallLayers, contraverga?: boolean): Promise<IfcMesh[]> {
   const child = await getChild();
   const id = nextId++;
   return new Promise((resolve, reject) => {
     pending.set(id, {resolve, reject});
-    child.write(JSON.stringify({id, room, roof}) + '\n').catch(reject);
+    child.write(JSON.stringify({id, room, roof, wallLayers, contraverga}) + '\n').catch(reject);
   });
 }
