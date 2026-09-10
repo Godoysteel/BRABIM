@@ -18,7 +18,7 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 | Interface | Referência visual familiar ao Revit, com identidade própria e fluxos simplificados |
 | Protótipo | Web público no GitHub Pages |
 | Geometria atual | Cômodos retangulares alinhados, divisórias únicas e portas de ligação; geometria demonstrativa por padrão, com opção de motor real (IFC), incluindo telhado, para o ambiente ativo isolado no app desktop |
-| IfcOpenShell | Versão 0.8.5; integrado de verdade ao app desktop via processo local (sidecar) — ver [integração](../03-arquitetura/integracao-ifcopenshell.md). Cobre o retângulo de 4 paredes de um ambiente isolado, com porta, janela e telhado (4 águas, OCCT) cortados/calculados de verdade; piso e ambientes conectados ainda não |
+| IfcOpenShell | Versão 0.8.5; integrado de verdade ao app desktop via processo local (sidecar) — ver [integração](../03-arquitetura/integracao-ifcopenshell.md). Cobre o retângulo de 4 paredes de um ambiente isolado, com porta, janela, telhado (4 águas, OCCT) e agora pilares/viga de cinta cortados/calculados de verdade, com armação real opcional; piso e ambientes conectados ainda não |
 | Público prioritário | Estudante; modelo comercial confirmado ([0007](../04-decisoes/0007-publico-estudante-comercial.md)); não validado pela pesquisa existente (feita com profissionais atuantes) |
 | MVP comercial | Não definido |
 | Plataforma final | Desktop — decidido; empacotamento (Tauri + sidecar IfcOpenShell) validado de ponta a ponta ([0006](../04-decisoes/0006-plataforma-desktop-e-retorno-ifcopenshell.md)) |
@@ -41,6 +41,7 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 4. Adicionar piso ao cálculo real do motor (porta, janela e telhado já calculam de verdade; falta o piso).
 5. Expor controles de inclinação/beiral do telhado na interface (hoje fixos no código) e testar contornos não retangulares.
 6. Resolver a pendência de licenciamento (LGPL) antes de qualquer cobrança; Paulo e Diego podem testar o protótipo público pelo link.
+7. Otimizar o recálculo quando "Estrutura" e "Armação" estão ligados juntos (~4 s por edição hoje, ver [integração](../03-arquitetura/integracao-ifcopenshell.md#pilares-e-vigas-cinta-reais-10092026)), se isso incomodar no uso real.
 
 Não há prazo, orçamento, contas de colaboradores ou compromissos individuais confirmados.
 

@@ -8,7 +8,7 @@ import {sitePath} from '@/lib/site-path';
 import {computeRoomMeshes,isEngineAvailable} from '@/lib/engine-client';
 import {brickCatalog,rebarCatalog,initialRebarSpec,type RebarSpec} from '@/lib/materials';
 import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
-import {Square,DoorOpen,AppWindow,Triangle,LayoutGrid,TrendingUp,Lock,Save,FolderOpen,Undo2,Scan,BrickWall} from 'lucide-react';
+import {Square,DoorOpen,AppWindow,Triangle,LayoutGrid,TrendingUp,Lock,Save,FolderOpen,Undo2,Scan,BrickWall,Columns3} from 'lucide-react';
 const labels:Record<keyof Room,string>={width:'Largura interna',depth:'Profundidade interna',height:'Altura das paredes',thickness:'Espessura das paredes',floor:'Espessura do piso',doorWidth:'Largura da porta externa',doorHeight:'Altura da porta externa',doorOffset:'Porta: distância da esquerda',windowWidth:'Largura da janela',windowHeight:'Altura da janela',sill:'Peitoril da janela',windowOffset:'Janela: distância da esquerda'};
 const elementNames:Record<string,string>={P01:'Parede norte',P02:'Parede sul',P03:'Parede oeste',P04:'Parede leste',D01:'Porta externa',J01:'Janela',F01:'Piso'};
 export default function RoomEditor(){
@@ -28,6 +28,9 @@ export default function RoomEditor(){
   const [contravergaOn,setContravergaOn]=useState(false);
   const [rebarOn,setRebarOn]=useState(false);
   const [rebarSpec,setRebarSpec]=useState<RebarSpec>(initialRebarSpec);
+  const [structureOn,setStructureOn]=useState(false);
+  const [columnSize,setColumnSize]=useState(.2);
+  const [beamHeight,setBeamHeight]=useState(.2);
   const roofEdgesByType:Record<typeof roofType,('north'|'south'|'east'|'west')[]>={quatro:['north','south','east','west'],'duas-ns':['north','south'],'duas-leo':['east','west']};
   const meshes=useMemo(()=>houseMeshes(house),[house]);
   const layout=useMemo(()=>layoutHouse(house),[house]);
@@ -43,14 +46,15 @@ export default function RoomEditor(){
       const nonEmpty=Object.fromEntries(Object.entries(current.wallLayers??{}).filter(([,list])=>list&&list.length>0));
       const wallLayers=Object.keys(nonEmpty).length?nonEmpty:undefined;
       const rebar=rebarOn?{longitudinal:{diameter:rebarCatalog.find(r=>r.id===rebarSpec.longitudinal)!.diameter,count:rebarSpec.longitudinalCount},stirrup:{diameter:rebarCatalog.find(r=>r.id===rebarSpec.stirrup)!.diameter,spacing:rebarSpec.stirrupSpacing}}:undefined;
-      computeRoomMeshes({width,depth,height,thickness,doorWidth,doorHeight,doorOffset,windowWidth,windowHeight,windowOffset,sill},roof,wallLayers,contravergaOn,rebar).then(result=>{
+      const structure=structureOn?{columnSize,beamHeight}:undefined;
+      computeRoomMeshes({width,depth,height,thickness,doorWidth,doorHeight,doorOffset,windowWidth,windowHeight,windowOffset,sill},roof,wallLayers,contravergaOn,rebar,structure).then(result=>{
         const shifted=result.map(m=>({...m,vertices:m.vertices.map(([x,y,z])=>[x+entry.center,y,z])}));
         setEngineMeshes(prev=>({...prev,[roomId]:shifted}));
         setEngineStatus('Motor IFC atualizado.');
       }).catch(e=>setEngineStatus('Erro no motor: '+(e as Error).message));
     },250);
     return ()=>clearTimeout(timer);
-  },[engineOn,roofOn,roofType,contravergaOn,rebarOn,rebarSpec,current.id,current.wallLayers,room.width,room.depth,room.height,room.thickness,room.doorWidth,room.doorHeight,room.doorOffset,room.windowWidth,room.windowHeight,room.windowOffset,room.sill,layout]);
+  },[engineOn,roofOn,roofType,contravergaOn,rebarOn,rebarSpec,structureOn,columnSize,beamHeight,current.id,current.wallLayers,room.width,room.depth,room.height,room.thickness,room.doorWidth,room.doorHeight,room.doorOffset,room.windowWidth,room.windowHeight,room.windowOffset,room.sill,layout]);
   const displayMeshes=useMemo(()=>{
     if(!engineOn||!Object.keys(engineMeshes).length)return meshes;
     const engineIds=new Set(Object.keys(engineMeshes).flatMap(roomId=>['P01','P02','P03','P04','D01','J01'].map(w=>`${roomId}:${w}`)));
@@ -74,7 +78,7 @@ export default function RoomEditor(){
   function restore(){try{const text=localStorage.getItem('brabim-house-v1')??localStorage.getItem('brabim-room-v1');if(!text)throw Error('Nenhum projeto salvo neste navegador.');apply(()=>parseHouse(text));setReset(v=>v+1);}catch(e){setMessage((e as Error).message);}}
   function download(){const url=URL.createObjectURL(new Blob([serializeHouse(house)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='projeto.brabim.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setMessage('Arquivo do projeto preparado para download.');}
   function downloadDebug(){
-    const payload={geradoEm:new Date().toISOString(),cômodoAtivo:current.id,motorReal:engineOn,telhado:roofOn?roofType:false,camadasDeParede:current.wallLayers,parâmetrosDoCômodo:room,malhasExibidas:displayMeshes};
+    const payload={geradoEm:new Date().toISOString(),cômodoAtivo:current.id,motorReal:engineOn,telhado:roofOn?roofType:false,estrutura:structureOn?{columnSize,beamHeight}:false,camadasDeParede:current.wallLayers,parâmetrosDoCômodo:room,malhasExibidas:displayMeshes};
     const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
     const a=document.createElement('a');a.href=url;a.download='brabim-depuracao.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
     setMessage('Dados de depuração exportados (vértices/faces reais na tela).');
@@ -109,6 +113,7 @@ export default function RoomEditor(){
           <button className={`tool${selPart==='D01'?' active':''}`} onClick={()=>pick(`${current.id}:D01`)} title="Porta"><DoorOpen/>Porta</button>
           <button className={`tool${selPart==='J01'?' active':''}`} onClick={()=>pick(`${current.id}:J01`)} title="Janela"><AppWindow/>Janela</button>
           {isEngineAvailable()&&<button className={`tool${roofOn?' active':''}`} onClick={()=>setRoofOn(v=>!v)} title="Telhado"><Triangle/>Telhado</button>}
+          {isEngineAvailable()&&<button className={`tool${structureOn?' active':''}`} onClick={()=>setStructureOn(v=>!v)} title="Pilares nos 4 cantos e viga de cinta no topo das paredes"><Columns3/>Estrutura</button>}
           <button className="tool locked" disabled title="Laje (em breve)"><LayoutGrid/>Laje</button>
           <button className="tool locked" disabled title="Escada (em breve)"><TrendingUp/>Escada</button>
         </div>
@@ -117,8 +122,12 @@ export default function RoomEditor(){
           <option value="duas-ns">Duas águas (cumeeira leste-oeste)</option>
           <option value="duas-leo">Duas águas (cumeeira norte-sul)</option>
         </select>}
+        {isEngineAvailable()&&structureOn&&<>
+          <label title="Lado da seção do pilar (m)">Pilar <input type="number" min={.1} max={.4} step={.01} value={columnSize} onChange={e=>setColumnSize(Number(e.target.value))} style={{width:'4em'}} aria-label="Lado do pilar em metros"/></label>
+          <label title="Altura da viga de cinta no topo da parede (m)">Cinta <input type="number" min={.1} max={.4} step={.01} value={beamHeight} onChange={e=>setBeamHeight(Number(e.target.value))} style={{width:'4em'}} aria-label="Altura da viga de cinta em metros"/></label>
+        </>}
         {isEngineAvailable()&&<label title="Verga fica sempre sobre porta e janela; contraverga abaixo do peitoril é opcional."><input type="checkbox" checked={contravergaOn} onChange={e=>setContravergaOn(e.target.checked)}/>Contraverga</label>}
-        {isEngineAvailable()&&<label title="Ferro real dentro da verga/contraverga (geometria e quantitativo, não dimensionamento estrutural)."><input type="checkbox" checked={rebarOn} onChange={e=>setRebarOn(e.target.checked)}/>Armação</label>}
+        {isEngineAvailable()&&<label title="Ferro real dentro da verga/contraverga e, se ligados, dos pilares e vigas (geometria e quantitativo, não dimensionamento estrutural)."><input type="checkbox" checked={rebarOn} onChange={e=>setRebarOn(e.target.checked)}/>Armação</label>}
         {isEngineAvailable()&&rebarOn&&<>
           <select value={rebarSpec.longitudinal} onChange={e=>setRebarSpec(s=>({...s,longitudinal:e.target.value}))} title="Bitola das barras longitudinais">
             {rebarCatalog.map(r=><option key={r.id} value={r.id}>Ø{r.id} {r.steelClass}</option>)}

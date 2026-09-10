@@ -280,6 +280,21 @@ def _lintel_extents(axis_origin, along_offset, width, z0, z1, wall_thickness, be
     return x0, x1, y0, y1, z0, z1
 
 
+def _tie_beam_extents(a, b, thickness, z0, z1):
+    """Axis-aligned extents for one wall's tie beam (the 'cinta' at the
+    top of the wall, see build_room's `structure` block) -- same
+    corner-overlap padding as _wall_cap so two walls' beams meet flush at
+    the corner (the corner column is cut out of the resulting box
+    afterwards, since both are concrete and would otherwise coincide).
+    """
+    ax, ay = a; bx, by = b
+    if ax == bx:  # east/west wall: thin in x, spans y
+        y0, y1 = sorted((ay, by))
+        return ax - thickness/2, ax + thickness/2, y0 - thickness/2, y1 + thickness/2, z0, z1
+    x0, x1 = sorted((ax, bx))  # north/south wall: thin in y, spans x
+    return x0 - thickness/2, x1 + thickness/2, ay - thickness/2, ay + thickness/2, z0, z1
+
+
 def add_lintel(f, body, storey, name, box, predefined_type):
     """A concrete beam spanning an opening: `verga` above it (predefined_type
     'LINTEL') or `contraverga` below a window's sill (no matching
@@ -331,40 +346,115 @@ def _stirrup_ring(x, y0, y1, z0, z1, r):
     return vertices, faces
 
 
-def _reinforce_beam(x0, x1, y0, y1, z0, z1, long_diam, long_count, stirrup_diam, stirrup_spacing):
+def _reinforce_beam(u0, u1, v0, v1, z0, z1, long_diam, long_count, stirrup_diam, stirrup_spacing, axis='x'):
     """Real rebar geometry for any axis-aligned box-shaped concrete
     element, generic on purpose so the same function covers a future
     cinta/viga, not just today's verga/contraverga: longitudinal bars
-    run the box's long axis (x), split evenly between a bottom and top
-    row inset by REBAR_COVER from each face; stirrups are rectangular
-    rings around the cross-section at `stirrup_spacing` along x. This is
-    geometry and quantitative mass, not a structural calculation -- bar
-    count/diameter/spacing are the caller's choice, not something this
-    derives from load or span.
+    run the box's long (horizontal) axis, split evenly between a bottom
+    and top row inset by REBAR_COVER from each face; stirrups are
+    rectangular rings around the cross-section at `stirrup_spacing`
+    along that axis. `u0,u1` is the range along the beam's length,
+    `v0,v1` the range across its horizontal width -- `axis` says which
+    world axis `u` actually is ('x', the default, for every north/south
+    verga/contraverga; 'y' for a tie beam along an east/west wall, see
+    build_room's `structure` block), `v` is always the other one. This
+    is geometry and quantitative mass, not a structural calculation --
+    bar count/diameter/spacing are the caller's choice, not something
+    this derives from load or span.
     """
-    yc0, yc1 = y0 + REBAR_COVER, y1 - REBAR_COVER
+    vc0, vc1 = v0 + REBAR_COVER, v1 - REBAR_COVER
     zc0, zc1 = z0 + REBAR_COVER, z1 - REBAR_COVER
     def row(n, z):
         if n <= 0:
             return []
         if n == 1:
-            return [((yc0 + yc1) / 2, z)]
-        return [(yc0 + i * (yc1 - yc0) / (n - 1), z) for i in range(n)]
+            return [((vc0 + vc1) / 2, z)]
+        return [(vc0 + i * (vc1 - vc0) / (n - 1), z) for i in range(n)]
     bottom_n = (long_count + 1) // 2
     top_n = long_count - bottom_n
-    long_r, length = long_diam / 2, x1 - x0
-    longitudinal = [BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(x0, y, z), gp_Dir(1, 0, 0)), long_r, length).Shape() for y, z in row(bottom_n, zc0) + row(top_n, zc1)]
+    long_r, length = long_diam / 2, u1 - u0
+    direction = gp_Dir(1, 0, 0) if axis == 'x' else gp_Dir(0, 1, 0)
+    def origin(v, z):
+        return gp_Pnt(u0, v, z) if axis == 'x' else gp_Pnt(v, u0, z)
+    longitudinal = [BRepPrimAPI_MakeCylinder(gp_Ax2(origin(v, z), direction), long_r, length).Shape() for v, z in row(bottom_n, zc0) + row(top_n, zc1)]
     stirrup_r = stirrup_diam / 2
     margin = max(REBAR_COVER, stirrup_r * 2)
     # Every stirrup along one beam shares the same cross-section -- build
     # the ring's geometry once (the OCCT construction + triangulation
-    # that dominated the cost here) and just shift its x coordinate in
-    # plain Python for each repeat, instead of re-running OCCT per ring.
-    template_v, template_f = _stirrup_ring(0.0, yc0, yc1, zc0, zc1, stirrup_r)
-    stirrups, x = [], x0 + margin
-    while x <= x1 - margin:
-        stirrups.append(([(vx + x, vy, vz) for vx, vy, vz in template_v], template_f))
-        x += stirrup_spacing
+    # that dominated the cost here) and just shift its position in plain
+    # Python for each repeat, instead of re-running OCCT per ring.
+    template_v, template_f = _stirrup_ring(0.0, vc0, vc1, zc0, zc1, stirrup_r)
+    stirrups, u = [], u0 + margin
+    while u <= u1 - margin:
+        shifted = [(vx + u, vy, vz) for vx, vy, vz in template_v] if axis == 'x' else [(vy, vx + u, vz) for vx, vy, vz in template_v]
+        stirrups.append((shifted, template_f))
+        u += stirrup_spacing
+    return longitudinal, stirrups
+
+
+def _perimeter_points(n, x0, x1, y0, y1):
+    """n points evenly spaced clockwise around a rectangle's perimeter,
+    starting at a corner -- the common 4/6/8-bar column layout (bars at
+    or near the corners), not an optimized cross-section design.
+    """
+    if n <= 0:
+        return []
+    if n == 1:
+        return [((x0 + x1) / 2, (y0 + y1) / 2)]
+    w, h = x1 - x0, y1 - y0
+    perimeter = 2 * (w + h)
+    points = []
+    for i in range(n):
+        d = i * perimeter / n
+        if d < w:
+            points.append((x0 + d, y0))
+        elif d < w + h:
+            points.append((x1, y0 + (d - w)))
+        elif d < 2 * w + h:
+            points.append((x1 - (d - w - h), y1))
+        else:
+            points.append((x0, y1 - (d - 2 * w - h)))
+    return points
+
+
+def _stirrup_ring_xy(z, x0, x1, y0, y1, r):
+    """Horizontal counterpart to _stirrup_ring: a rectangular ring in the
+    x-y cross-section at height z, for a vertical column's stirrups.
+    """
+    segments = [
+        BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(x0, y0, z), gp_Dir(1, 0, 0)), r, x1 - x0).Shape(),
+        BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(x0, y1, z), gp_Dir(1, 0, 0)), r, x1 - x0).Shape(),
+        BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(x0, y0, z), gp_Dir(0, 1, 0)), r, y1 - y0).Shape(),
+        BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(x1, y0, z), gp_Dir(0, 1, 0)), r, y1 - y0).Shape(),
+    ]
+    vertices, faces = [], []
+    for seg in segments:
+        v, fc = _triangulate_occt(seg)
+        base = len(vertices)
+        vertices.extend(v)
+        faces.extend((a + base, b + base, c + base) for a, b, c in fc)
+    return vertices, faces
+
+
+def _reinforce_column(x0, x1, y0, y1, z0, z1, long_diam, long_count, stirrup_diam, stirrup_spacing):
+    """Vertical counterpart to _reinforce_beam: longitudinal bars run the
+    column's full height (z) at points around the cross-section's
+    perimeter (see _perimeter_points), stirrups are rectangular rings in
+    the x-y plane at `stirrup_spacing` along z. Same caveat as
+    _reinforce_beam -- geometry and quantitative mass, not a structural
+    design (bar count/diameter/spacing are the caller's choice).
+    """
+    xc0, xc1 = x0 + REBAR_COVER, x1 - REBAR_COVER
+    yc0, yc1 = y0 + REBAR_COVER, y1 - REBAR_COVER
+    long_r, length = long_diam / 2, z1 - z0
+    longitudinal = [BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(x, y, z0), gp_Dir(0, 0, 1)), long_r, length).Shape() for x, y in _perimeter_points(long_count, xc0, xc1, yc0, yc1)]
+    stirrup_r = stirrup_diam / 2
+    margin = max(REBAR_COVER, stirrup_r * 2)
+    template_v, template_f = _stirrup_ring_xy(0.0, xc0, xc1, yc0, yc1, stirrup_r)
+    stirrups, z = [], z0 + margin
+    while z <= z1 - margin:
+        stirrups.append(([(vx, vy, vz + z) for vx, vy, vz in template_v], template_f))
+        z += stirrup_spacing
     return longitudinal, stirrups
 
 
@@ -391,7 +481,7 @@ def add_reinforcement(f, body, storey, name_prefix, longitudinal, stirrups):
         entities.append(e)
     return entities
 
-def build_room(width, depth, height, thickness, door=None, window=None, roof=None, layers=None, contraverga=False, rebar=None):
+def build_room(width, depth, height, thickness, door=None, window=None, roof=None, layers=None, contraverga=False, rebar=None, structure=None):
     w, d, h, t = width, depth, height, thickness
     # Rectangle loop: north, south, west, east walls, joined at all 4 corners.
     base = [
@@ -512,6 +602,52 @@ def build_room(width, depth, height, thickness, door=None, window=None, roof=Non
             if wall_layers:
                 layer_entities[name] = attach_wall_layers(f, body, storey, name, a, b, wall_layers, _WALL_OUTWARD[i], h, openings.get(name))
 
+    # Pilares (IfcColumn) at the 4 corners and a tie beam ('cinta',
+    # IfcBeam) running the top of every wall, the concrete frame a real
+    # alvenaria-de-vedação house is normally built on -- independent of
+    # the roof block below (columns always run 0..h, matching wall
+    # height; the roof, if any, sits on top the same way it already does
+    # on the walls). Columns and beams are both concrete and share the
+    # corner, so each tie beam is cut by the fused column boxes to avoid
+    # two coincident faces there (the same z-fight this file already
+    # avoids for the layer/lintel overlap above).
+    structure_entities = []
+    if structure:
+        col_size = structure.get('columnSize', t)
+        beam_height = structure.get('beamHeight', .2)
+        corners = [('NO', -w/2, d/2), ('NE', w/2, d/2), ('SO', -w/2, -d/2), ('SE', w/2, -d/2)]
+        column_boxes = []
+        for name, cx, cy in corners:
+            box = BRepPrimAPI_MakeBox(gp_Pnt(cx - col_size/2, cy - col_size/2, 0), gp_Pnt(cx + col_size/2, cy + col_size/2, h)).Shape()
+            column_boxes.append(box)
+            vertices, faces = _triangulate_occt(box)
+            col = api.run('root.create_entity', f, ifc_class='IfcColumn', name=f'PILAR-{name}')
+            api.run('spatial.assign_container', f, products=[col], relating_structure=storey)
+            rep = api.run('geometry.add_mesh_representation', f, context=body, vertices=[vertices], faces=[faces])
+            api.run('geometry.assign_representation', f, product=col, representation=rep)
+            api.run('geometry.edit_object_placement', f, product=col)
+            structure_entities.append(col)
+            if rebar:
+                long_diam, long_count = rebar['longitudinal']
+                stirrup_diam, spacing = rebar['stirrup']
+                longitudinal, stirrups = _reinforce_column(cx - col_size/2, cx + col_size/2, cy - col_size/2, cy + col_size/2, 0, h, long_diam, long_count, stirrup_diam, spacing)
+                structure_entities.extend(add_reinforcement(f, body, storey, f'PILAR-{name}', longitudinal, stirrups))
+        columns_fused = column_boxes[0]
+        for b in column_boxes[1:]:
+            columns_fused = BRepAlgoAPI_Fuse(columns_fused, b).Shape()
+        for i, (a, b) in enumerate(base):
+            name = f'P{i+1:02}'
+            axis_horizontal = 'y' if a[0] == b[0] else 'x'
+            extents = _tie_beam_extents(a, b, _wall_thickness(name), h - beam_height, h)
+            beam_shape = BRepAlgoAPI_Cut(_box_from_extents(extents), columns_fused).Shape()
+            structure_entities.append(add_lintel(f, body, storey, f'CINTA-{name}', beam_shape, 'BEAM'))
+            if rebar:
+                long_diam, long_count = rebar['longitudinal']
+                stirrup_diam, spacing = rebar['stirrup']
+                reinforce_extents = (extents[2], extents[3], extents[0], extents[1], extents[4], extents[5]) if axis_horizontal == 'y' else extents
+                longitudinal, stirrups = _reinforce_beam(*reinforce_extents, long_diam, long_count, stirrup_diam, spacing, axis=axis_horizontal)
+                structure_entities.extend(add_reinforcement(f, body, storey, f'CINTA-{name}', longitudinal, stirrups))
+
     roof_entity, cap_entities = None, []
     if roof:
         # width/depth are the room's *internal* clear dimensions; the wall's
@@ -570,6 +706,12 @@ def build_room(width, depth, height, thickness, door=None, window=None, roof=Non
             # is correct here regardless of which wall the beam belongs to.
             mesh['uv'] = _wall_uv(v, 'P01')
         meshes.append(mesh)
+    for elem in structure_entities:
+        shape = ifcopenshell.geom.create_shape(settings, elem)
+        v = np.array(shape.geometry.verts).reshape(-1, 3)
+        faces = np.array(shape.geometry.faces).reshape(-1, 3)
+        material = 'Aço' if elem.is_a('IfcReinforcingBar') else 'Concreto'
+        meshes.append({'id': elem.Name, 'guid': elem.GlobalId, 'material': material, 'vertices': v.tolist(), 'faces': faces.tolist()})
     return meshes
 
 def main():
@@ -593,6 +735,7 @@ def main():
                 layers={name: [(l['material'], float(l['thickness'])) for l in wl] for name, wl in req['wallLayers'].items()} if req.get('wallLayers') else None,
                 contraverga=bool(req.get('contraverga', False)),
                 rebar={'longitudinal': (float(req['rebar']['longitudinal']['diameter']), int(req['rebar']['longitudinal']['count'])), 'stirrup': (float(req['rebar']['stirrup']['diameter']), float(req['rebar']['stirrup']['spacing']))} if req.get('rebar') else None,
+                structure={'columnSize': float(req['structure']['columnSize']), 'beamHeight': float(req['structure']['beamHeight'])} if req.get('structure') else None,
             )
             print(json.dumps({'type': 'result', 'id': req.get('id'), 'elapsed_seconds': round(time.perf_counter() - t0, 3), 'meshes': meshes}), flush=True)
         except Exception as e:

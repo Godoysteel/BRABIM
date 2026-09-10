@@ -9,6 +9,7 @@ import type {WallLayers} from '@/lib/house';
 export type EngineRoomParams = Pick<Room,'width'|'depth'|'height'|'thickness'|'doorWidth'|'doorHeight'|'doorOffset'|'windowWidth'|'windowHeight'|'windowOffset'|'sill'>;
 export type EngineRoofParams = {slope: number; slopedEdges: ('north'|'south'|'east'|'west')[]};
 export type EngineRebarParams = {longitudinal: {diameter: number; count: number}; stirrup: {diameter: number; spacing: number}};
+export type EngineStructureParams = {columnSize: number; beamHeight: number};
 
 type Pending = {resolve: (meshes: IfcMesh[]) => void; reject: (error: Error) => void};
 
@@ -42,11 +43,11 @@ async function getChild() {
   return childPromise;
 }
 
-export async function computeRoomMeshes(room: EngineRoomParams, roof?: EngineRoofParams, wallLayers?: WallLayers, contraverga?: boolean, rebar?: EngineRebarParams): Promise<IfcMesh[]> {
+export async function computeRoomMeshes(room: EngineRoomParams, roof?: EngineRoofParams, wallLayers?: WallLayers, contraverga?: boolean, rebar?: EngineRebarParams, structure?: EngineStructureParams): Promise<IfcMesh[]> {
   const child = await getChild();
   const id = nextId++;
   return new Promise((resolve, reject) => {
     pending.set(id, {resolve, reject});
-    child.write(JSON.stringify({id, room, roof, wallLayers, contraverga, rebar}) + '\n').catch(reject);
+    child.write(JSON.stringify({id, room, roof, wallLayers, contraverga, rebar, structure}) + '\n').catch(reject);
   });
 }

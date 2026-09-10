@@ -40,6 +40,12 @@ O `worker.py` passou a calcular também o telhado do ambiente ativo por interse�
 
 Dois bugs de alinhamento entre parede e telhado apareceram e foram corrigidos nessa integração — detalhados na [decisão 0008](../04-decisoes/0008-telhado-por-interseccao-de-planos.md#integração-real-no-app-e-dois-bugs-de-alinhamento-10092026). Ambos só foram diagnosticados com precisão graças a um **painel de ferramentas de depuração** construído nesta sessão (coordenadas por clique no 3D, exportação de vértices/faces em JSON, wireframe, corte de seção) — ver a mesma decisão para detalhes. Esse painel fica disponível a qualquer momento no editor, não é específico de telhado, e deve seguir útil para futuros bugs de geometria.
 
+## Pilares e vigas (cinta) reais (10/09/2026)
+
+O `worker.py` passou a gerar também a estrutura de concreto do ambiente ativo: um `IfcColumn` em cada um dos 4 cantos e um `IfcBeam` ("cinta de amarração") no topo de cada parede, ligados por um campo "Estrutura" na interface com dois parâmetros editáveis (lado do pilar, altura da cinta). Como pilar e viga ocupam o mesmo canto, a viga é recortada (booleana OCCT) pela união dos 4 pilares antes de virar malha — sem esse recorte, as duas faces coincidentes no canto piscavam na tela (mesma classe de bug já resolvida para camada/verga). Com "Armação" ligada, os mesmos pilares e vigas recebem ferragem real: `_reinforce_beam` (antes só horizontal, eixo X) ganhou um parâmetro de eixo para também servir a cinta de paredes leste/oeste (eixo Y), e uma função irmã vertical (`_reinforce_column`) cobre os pilares, com as barras longitudinais distribuídas ao redor do perímetro da seção (não só em duas fileiras, como na verga).
+
+Testado isoladamente via `worker.py` (sem app Tauri disponível neste ambiente): pilares e vigas nascem exatamente encostados nos cantos, sem vão nem sobreposição, e a ferragem cai nas posições esperadas. Ligar "Estrutura" sozinho é rápido (~0,2 s); ligar "Estrutura" **e** "Armação" juntos sobe para ~4 s por recálculo num ambiente padrão, porque cada barra/estribo é uma entidade IFC própria (mais de 200 nesse caso) e o motor remalha cada uma duas vezes (uma para gravar a representação IFC, outra ao reler para a viewport — custo já existente no arquivo, só mais visível com mais entidades). Não há trava de desempenho para esse combo hoje; se incomodar no uso real, a otimização mais direta é parar de reler via `ifcopenshell.geom.create_shape` para formas que o próprio worker já triangulou.
+
 ## Validação prevista
 
 | Caso | Evidência necessária |
