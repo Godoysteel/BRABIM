@@ -6,8 +6,9 @@ import {initialHouse,validateHouse,parseHouse,serializeHouse,layoutHouse,updateH
 import {houseMeshes} from '@/lib/house-geometry';
 import {sitePath} from '@/lib/site-path';
 import {computeRoomMeshes,isEngineAvailable} from '@/lib/engine-client';
-import {brickCatalog} from '@/lib/materials';
+import {brickCatalog,rebarCatalog,initialRebarSpec,type RebarSpec} from '@/lib/materials';
 import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
+import {Square,DoorOpen,AppWindow,Triangle,LayoutGrid,TrendingUp,Lock,Save,FolderOpen,Undo2,Scan,BrickWall} from 'lucide-react';
 const labels:Record<keyof Room,string>={width:'Largura interna',depth:'Profundidade interna',height:'Altura das paredes',thickness:'Espessura das paredes',floor:'Espessura do piso',doorWidth:'Largura da porta externa',doorHeight:'Altura da porta externa',doorOffset:'Porta: distância da esquerda',windowWidth:'Largura da janela',windowHeight:'Altura da janela',sill:'Peitoril da janela',windowOffset:'Janela: distância da esquerda'};
 const elementNames:Record<string,string>={P01:'Parede norte',P02:'Parede sul',P03:'Parede oeste',P04:'Parede leste',D01:'Porta externa',J01:'Janela',F01:'Piso'};
 export default function RoomEditor(){
@@ -25,6 +26,8 @@ export default function RoomEditor(){
   const [roofOn,setRoofOn]=useState(false);
   const [roofType,setRoofType]=useState<'quatro'|'duas-ns'|'duas-leo'>('quatro');
   const [contravergaOn,setContravergaOn]=useState(false);
+  const [rebarOn,setRebarOn]=useState(false);
+  const [rebarSpec,setRebarSpec]=useState<RebarSpec>(initialRebarSpec);
   const roofEdgesByType:Record<typeof roofType,('north'|'south'|'east'|'west')[]>={quatro:['north','south','east','west'],'duas-ns':['north','south'],'duas-leo':['east','west']};
   const meshes=useMemo(()=>houseMeshes(house),[house]);
   const layout=useMemo(()=>layoutHouse(house),[house]);
@@ -39,14 +42,15 @@ export default function RoomEditor(){
       const roof=roofOn?{slope:.6,slopedEdges:roofEdgesByType[roofType]}:undefined;
       const nonEmpty=Object.fromEntries(Object.entries(current.wallLayers??{}).filter(([,list])=>list&&list.length>0));
       const wallLayers=Object.keys(nonEmpty).length?nonEmpty:undefined;
-      computeRoomMeshes({width,depth,height,thickness,doorWidth,doorHeight,doorOffset,windowWidth,windowHeight,windowOffset,sill},roof,wallLayers,contravergaOn).then(result=>{
+      const rebar=rebarOn?{longitudinal:{diameter:rebarCatalog.find(r=>r.id===rebarSpec.longitudinal)!.diameter,count:rebarSpec.longitudinalCount},stirrup:{diameter:rebarCatalog.find(r=>r.id===rebarSpec.stirrup)!.diameter,spacing:rebarSpec.stirrupSpacing}}:undefined;
+      computeRoomMeshes({width,depth,height,thickness,doorWidth,doorHeight,doorOffset,windowWidth,windowHeight,windowOffset,sill},roof,wallLayers,contravergaOn,rebar).then(result=>{
         const shifted=result.map(m=>({...m,vertices:m.vertices.map(([x,y,z])=>[x+entry.center,y,z])}));
         setEngineMeshes(prev=>({...prev,[roomId]:shifted}));
         setEngineStatus('Motor IFC atualizado.');
       }).catch(e=>setEngineStatus('Erro no motor: '+(e as Error).message));
     },250);
     return ()=>clearTimeout(timer);
-  },[engineOn,roofOn,roofType,contravergaOn,current.id,current.wallLayers,room.width,room.depth,room.height,room.thickness,room.doorWidth,room.doorHeight,room.doorOffset,room.windowWidth,room.windowHeight,room.windowOffset,room.sill,layout]);
+  },[engineOn,roofOn,roofType,contravergaOn,rebarOn,rebarSpec,current.id,current.wallLayers,room.width,room.depth,room.height,room.thickness,room.doorWidth,room.doorHeight,room.doorOffset,room.windowWidth,room.windowHeight,room.windowOffset,room.sill,layout]);
   const displayMeshes=useMemo(()=>{
     if(!engineOn||!Object.keys(engineMeshes).length)return meshes;
     const engineIds=new Set(Object.keys(engineMeshes).flatMap(roomId=>['P01','P02','P03','P04','D01','J01'].map(w=>`${roomId}:${w}`)));
@@ -80,65 +84,86 @@ export default function RoomEditor(){
   function name(id:string){if(id.startsWith('shared:'))return 'Parede compartilhada';if(id.startsWith('link:'))return 'Porta de ligação';return elementNames[id.split(':')[1]]??id;}
   return <main className="editor">
     <header className="titlebar"><strong><span className="brandmark">B</span> BRABIM</strong><span>Casa · ambientes conectados</span><a href={sitePath('/ensaios/')}>Ensaios IFC →</a></header>
-    <div className="tools" style={{flexWrap:'wrap',background:'#fafbfc'}}>
-      <button onClick={save}>Salvar no navegador</button><button onClick={restore}>Reabrir salvo</button><button onClick={download}>Exportar arquivo</button><button onClick={()=>input.current?.click()}>Abrir arquivo</button>
-      <button disabled={!history.length} onClick={()=>{const previous=history.at(-1)!;setHouse(previous);setActive(previous.rooms[0].id);select(`${previous.rooms[0].id}:F01`);setHistory(h=>h.slice(0,-1));setReset(v=>v+1);setMessage('Última alteração desfeita.');}}>Desfazer</button><button onClick={()=>setReset(v=>v+1)}>Enquadrar 3D</button>
-      <input ref={input} hidden type="file" accept=".json" onChange={async e=>{const file=e.target.files?.[0];if(file)try{if(file.size>100000)throw Error('Arquivo muito grande.');const text=await file.text();apply(()=>parseHouse(text));setReset(v=>v+1);}catch(error){setMessage((error as Error).message);}e.target.value='';}}/>
-      {isEngineAvailable()&&<label style={{display:'flex',alignItems:'center',gap:'.4em',marginLeft:'auto'}}><input type="checkbox" checked={engineOn} onChange={e=>{setEngineOn(e.target.checked);if(!e.target.checked)setEngineStatus('');}}/>Motor real (IFC) · {current.name}{engineStatus?` · ${engineStatus}`:''}</label>}
-      {isEngineAvailable()&&engineOn&&<label style={{display:'flex',alignItems:'center',gap:'.4em'}}><input type="checkbox" checked={roofOn} onChange={e=>setRoofOn(e.target.checked)}/>Telhado</label>}
-      {isEngineAvailable()&&engineOn&&<label style={{display:'flex',alignItems:'center',gap:'.4em'}} title="Verga fica sempre sobre porta e janela; contraverga abaixo do peitoril é opcional."><input type="checkbox" checked={contravergaOn} onChange={e=>setContravergaOn(e.target.checked)}/>Contraverga</label>}
-      {isEngineAvailable()&&engineOn&&roofOn&&<select value={roofType} onChange={e=>setRoofType(e.target.value as typeof roofType)}>
-        <option value="quatro">Quatro águas</option>
-        <option value="duas-ns">Duas águas (cumeeira leste-oeste)</option>
-        <option value="duas-leo">Duas águas (cumeeira norte-sul)</option>
-      </select>}
-      <button onClick={()=>setDebugOpen(v=>!v)} style={{marginLeft:isEngineAvailable()?undefined:'auto'}}>{debugOpen?'Fechar ferramentas':'Ferramentas de depuração'}</button>
+    <div className="tabs-row">
+      <div className="disc-tab active">Arquitetura</div>
+      <div className="disc-tab locked">Estrutura<Lock className="lock" size={11}/></div>
+      <div className="disc-tab locked">Instalações<Lock className="lock" size={11}/></div>
+      <div className="disc-tab locked">Documentação<Lock className="lock" size={11}/></div>
     </div>
-    {isWallSelected&&<div style={{background:'#eef6f0',borderTop:'1px solid #cfe3d4'}}>
-      <div className="tools" style={{flexWrap:'wrap',background:'transparent',borderTop:'none',alignItems:'center'}}>
-        <strong>Camadas · {elementNames[selPart]}</strong>
-        {selectedLayers.map((l,i)=><span key={i} style={{display:'flex',alignItems:'center',gap:'.3em'}}>
-          <input value={l.material} onChange={e=>updateLayer(i,{material:e.target.value})} style={{width:'9em'}} aria-label="Material da camada"/>
-          <input type="number" step="0.005" min="0.005" max="0.5" value={l.thickness} onChange={e=>updateLayer(i,{thickness:Number(e.target.value)})} style={{width:'5em'}} aria-label="Espessura da camada"/>
-          <span style={{fontSize:'.8em',color:'#6b8070'}}>m</span>
-          <button onClick={()=>removeLayer(i)} title="Remover camada">×</button>
-        </span>)}
-        <button onClick={addLayer}>+ Camada em branco</button>
-        {selectedLayers.length>0&&<span style={{fontSize:'.85em',color:'#547a5e'}}>Espessura oficial da parede (layout/telhado): {t.toFixed(2)} m · soma das camadas (visual): {selectedLayers.reduce((s,l)=>s+l.thickness,0).toFixed(3)} m</span>}
+    <div className="ribbon">
+      <div className="tools">
+        <div className="toolgroup">
+          <button onClick={save} title="Salvar no navegador"><Save size={16}/></button>
+          <button onClick={restore} title="Reabrir salvo"><FolderOpen size={16}/></button>
+          <button onClick={download} title="Exportar arquivo">Exportar</button>
+          <button onClick={()=>input.current?.click()} title="Abrir arquivo">Abrir</button>
+        </div>
+        <div className="toolgroup">
+          <button disabled={!history.length} title="Desfazer" onClick={()=>{const previous=history.at(-1)!;setHouse(previous);setActive(previous.rooms[0].id);select(`${previous.rooms[0].id}:F01`);setHistory(h=>h.slice(0,-1));setReset(v=>v+1);setMessage('Última alteração desfeita.');}}><Undo2 size={16}/></button>
+          <button onClick={()=>setReset(v=>v+1)} title="Enquadrar 3D"><Scan size={16}/></button>
+        </div>
+        <input ref={input} hidden type="file" accept=".json" onChange={async e=>{const file=e.target.files?.[0];if(file)try{if(file.size>100000)throw Error('Arquivo muito grande.');const text=await file.text();apply(()=>parseHouse(text));setReset(v=>v+1);}catch(error){setMessage((error as Error).message);}e.target.value='';}}/>
+        <div className="toolgroup">
+          <button className={`tool${isWallSelected?' active':''}`} onClick={()=>{const at=isWallSelected?wallIds.indexOf(selPart as WallId):-1;pick(`${current.id}:${wallIds[(at+1)%wallIds.length]}`);}} title="Parede (clique de novo para alternar)"><BrickWall/>Parede</button>
+          <button className={`tool${selPart==='F01'?' active':''}`} onClick={()=>pick(`${current.id}:F01`)} title="Ambiente"><Square/>Ambiente</button>
+          <button className={`tool${selPart==='D01'?' active':''}`} onClick={()=>pick(`${current.id}:D01`)} title="Porta"><DoorOpen/>Porta</button>
+          <button className={`tool${selPart==='J01'?' active':''}`} onClick={()=>pick(`${current.id}:J01`)} title="Janela"><AppWindow/>Janela</button>
+          {isEngineAvailable()&&<button className={`tool${roofOn?' active':''}`} onClick={()=>setRoofOn(v=>!v)} title="Telhado"><Triangle/>Telhado</button>}
+          <button className="tool locked" disabled title="Laje (em breve)"><LayoutGrid/>Laje</button>
+          <button className="tool locked" disabled title="Escada (em breve)"><TrendingUp/>Escada</button>
+        </div>
+        {isEngineAvailable()&&roofOn&&<select value={roofType} onChange={e=>setRoofType(e.target.value as typeof roofType)}>
+          <option value="quatro">Quatro águas</option>
+          <option value="duas-ns">Duas águas (cumeeira leste-oeste)</option>
+          <option value="duas-leo">Duas águas (cumeeira norte-sul)</option>
+        </select>}
+        {isEngineAvailable()&&<label title="Verga fica sempre sobre porta e janela; contraverga abaixo do peitoril é opcional."><input type="checkbox" checked={contravergaOn} onChange={e=>setContravergaOn(e.target.checked)}/>Contraverga</label>}
+        {isEngineAvailable()&&<label title="Ferro real dentro da verga/contraverga (geometria e quantitativo, não dimensionamento estrutural)."><input type="checkbox" checked={rebarOn} onChange={e=>setRebarOn(e.target.checked)}/>Armação</label>}
+        {isEngineAvailable()&&rebarOn&&<>
+          <select value={rebarSpec.longitudinal} onChange={e=>setRebarSpec(s=>({...s,longitudinal:e.target.value}))} title="Bitola das barras longitudinais">
+            {rebarCatalog.map(r=><option key={r.id} value={r.id}>Ø{r.id} {r.steelClass}</option>)}
+          </select>
+          <input type="number" min={2} max={8} step={1} value={rebarSpec.longitudinalCount} onChange={e=>setRebarSpec(s=>({...s,longitudinalCount:Number(e.target.value)}))} style={{width:'3.5em'}} title="Quantidade de barras longitudinais" aria-label="Quantidade de barras longitudinais"/>
+          <select value={rebarSpec.stirrup} onChange={e=>setRebarSpec(s=>({...s,stirrup:e.target.value}))} title="Bitola do estribo">
+            {rebarCatalog.map(r=><option key={r.id} value={r.id}>estribo Ø{r.id}</option>)}
+          </select>
+          <input type="number" min={.05} max={.4} step={.01} value={rebarSpec.stirrupSpacing} onChange={e=>setRebarSpec(s=>({...s,stirrupSpacing:Number(e.target.value)}))} style={{width:'4em'}} title="Espaçamento do estribo (m)" aria-label="Espaçamento do estribo em metros"/>
+        </>}
+        <div className="field" style={{marginLeft:'auto'}}>
+          {isEngineAvailable()&&<label><input type="checkbox" checked={engineOn} onChange={e=>{setEngineOn(e.target.checked);if(!e.target.checked)setEngineStatus('');}}/>Motor real (IFC){engineStatus?` · ${engineStatus}`:''}</label>}
+          <button onClick={()=>setDebugOpen(v=>!v)}>{debugOpen?'Fechar ferramentas':'Ferramentas de depuração'}</button>
+        </div>
       </div>
-      <div style={{display:'flex',gap:'.6em',padding:'.5em .8em .8em',overflowX:'auto'}} aria-label="Catálogo de tijolos e blocos">
-        {brickCatalog.map(brick=><button key={brick.id} onClick={()=>addBrickLayer(brick)} title={`Adicionar camada: ${brick.name} (${(brick.width*100).toFixed(1)} cm)`} style={{flex:'0 0 auto',display:'flex',flexDirection:'column',alignItems:'center',gap:'.3em',width:'6.5em',padding:'.4em',border:'1px solid #cfe3d4',borderRadius:'.4em',background:'#fff',cursor:'pointer'}}>
-          <span style={{width:'5.5em',height:'5.5em',borderRadius:'.3em',overflow:'hidden',background:'#e7e2d8',display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <img src={brick.image} alt={brick.name} style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/>
-          </span>
-          <span style={{fontSize:'.72em',textAlign:'center',lineHeight:1.2,color:'#3f4d47'}}>{brick.name}</span>
-          <span style={{fontSize:'.68em',color:'#7c8d84'}}>{(brick.width*100).toFixed(1)} cm · {brick.piecesPerM2}/m²</span>
-        </button>)}
+    </div>
+    {debugOpen&&<div className="debug-panel">
+      <div className="tools">
+        <label><input type="checkbox" checked={wireframeOn} onChange={e=>setWireframeOn(e.target.checked)}/>Wireframe</label>
+        <label><input type="checkbox" checked={sectionCutOn} onChange={e=>setSectionCutOn(e.target.checked)}/>Corte (metade frontal)</label>
+        <button onClick={downloadDebug}>Baixar dados de depuração (JSON)</button>
+        <button onClick={()=>setPickHistory([])} disabled={!pickHistory.length}>Limpar cliques</button>
+        {pickHistory.length>0&&<div style={{display:'flex',flexDirection:'column',gap:'.15em',fontSize:'.85em',fontFamily:'monospace'}}>
+          {pickHistory.map((p,i)=><span key={i}>#{pickHistory.length-i} x={p[0].toFixed(3)} y={p[1].toFixed(3)} altura={p[2].toFixed(3)}{i===0&&pickHistory[1]?` · dist. do #${pickHistory.length-1}=${Math.hypot(p[0]-pickHistory[1][0],p[1]-pickHistory[1][1],p[2]-pickHistory[1][2]).toFixed(3)}m`:''}</span>)}
+        </div>}
       </div>
     </div>}
-    {debugOpen&&<div className="tools" style={{flexWrap:'wrap',background:'#fff8ec',borderTop:'1px solid #eadfc7'}}>
-      <label style={{display:'flex',alignItems:'center',gap:'.4em'}}><input type="checkbox" checked={wireframeOn} onChange={e=>setWireframeOn(e.target.checked)}/>Wireframe</label>
-      <label style={{display:'flex',alignItems:'center',gap:'.4em'}}><input type="checkbox" checked={sectionCutOn} onChange={e=>setSectionCutOn(e.target.checked)}/>Corte (metade frontal)</label>
-      <button onClick={downloadDebug}>Baixar dados de depuração (JSON)</button>
-      <button onClick={()=>setPickHistory([])} disabled={!pickHistory.length}>Limpar cliques</button>
-      {pickHistory.length>0&&<div style={{display:'flex',flexDirection:'column',gap:'.15em',fontSize:'.85em',fontFamily:'monospace'}}>
-        {pickHistory.map((p,i)=><span key={i}>#{pickHistory.length-i} x={p[0].toFixed(3)} y={p[1].toFixed(3)} altura={p[2].toFixed(3)}{i===0&&pickHistory[1]?` · dist. do #${pickHistory.length-1}=${Math.hypot(p[0]-pickHistory[1][0],p[1]-pickHistory[1][1],p[2]-pickHistory[1][2]).toFixed(3)}m`:''}</span>)}
-      </div>}
-    </div>}
-    <div className="workspace"><aside className="properties"><h2>Ambientes · {house.rooms.length} de 8</h2>
+    <div className="workspace">
+      <aside className="properties nav"><h2>Navegador do projeto</h2>
       <section className="navigator">{house.rooms.map(e=><button key={e.id} className={current.id===e.id?'selected':''} onClick={()=>pick(`${e.id}:F01`)}>{e.name}<small>{(e.room.width*e.room.depth).toFixed(2)} m²</small></button>)}
         <button disabled={house.rooms.length>=8} onClick={()=>{try{const next=addHouseRoom(house);apply(()=>next,next.rooms.at(-1)!.id);}catch(e){setMessage((e as Error).message);}}}>+ Cômodo à direita</button>
         <button disabled={house.rooms.length===1} onClick={()=>apply(()=>({rooms:house.rooms.filter(e=>e.id!==current.id)}))}>Remover cômodo selecionado</button>
+        <div className="nav-branch">Estrutura<Lock className="lock" size={11}/></div>
+        <div className="nav-branch">Instalações<Lock className="lock" size={11}/></div>
       </section>
-      <section><label htmlFor="room-name">Nome do ambiente</label><input id="room-name" key={`${current.id}:${current.name}`} defaultValue={current.name} maxLength={50} onBlur={e=>{const value=e.target.value.trim();if(value!==current.name)apply(()=>({rooms:house.rooms.map(r=>r.id===current.id?{...r,name:value}:r)}));e.target.value=current.name;}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/>
+      <section><h3>Parâmetros · {current.name}</h3><label htmlFor="room-name">Nome do ambiente</label><input id="room-name" key={`${current.id}:${current.name}`} defaultValue={current.name} maxLength={50} onBlur={e=>{const value=e.target.value.trim();if(value!==current.name)apply(()=>({rooms:house.rooms.map(r=>r.id===current.id?{...r,name:value}:r)}));e.target.value=current.name;}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/>
       {(Object.keys(labels) as (keyof Room)[]).map(key=><div key={key}><label htmlFor={key}>{labels[key]}{(commonKeys as readonly string[]).includes(key)?' · todos':''}</label><input id={key} key={`${current.id}:${room[key]}`} type="number" step="0.05" defaultValue={room[key]} onBlur={e=>{const value=Number(e.target.value);if(e.target.value.trim()!==''&&value!==room[key])apply(()=>updateHouseRoom(house,current.id,key,value));e.target.value=String(room[key]);}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/></div>)}
       <p className="hint">Medidas em metros. Arraste a porta ou a janela na planta para reposicionar; os campos de distância continuam disponíveis para ajuste fino. Enter aplica. Cada divisão tem uma porta central de 0,90 m.</p><p className="hint">Nesta etapa, cômodos alinhados lado a lado. Remover um ambiente aproxima os restantes.</p></section>
-      <section className="navigator">{items.map(id=><button key={id} className={selected===id?'selected':''} onClick={()=>pick(id)}>{name(id)}<small>{id}</small></button>)}</section>
-    </aside><div className="drawing"><div className="viewbar"><Tabs value={view} onValueChange={v=>setView(String(v))}><TabsList><TabsTrigger value="plan">Planta</TabsTrigger><TabsTrigger value="3d">3D</TabsTrigger><TabsTrigger value="split">Lado a lado</TabsTrigger></TabsList></Tabs><span>{area.toFixed(2)} m² internos</span></div>
+      <section className="navigator"><h3>Elementos</h3>{items.map(id=><button key={id} className={selected===id?'selected':''} onClick={()=>pick(id)}>{name(id)}<small>{id}</small></button>)}</section>
+    </aside>
+    <div className="drawing"><div className="viewbar"><Tabs value={view} onValueChange={v=>setView(String(v))}><TabsList><TabsTrigger value="plan">Planta</TabsTrigger><TabsTrigger value="3d">3D</TabsTrigger><TabsTrigger value="split">Lado a lado</TabsTrigger></TabsList></Tabs><span>{area.toFixed(2)} m² internos</span></div>
     <div className={`views ${view==='split'?'split':''}`}>
       {view!=='3d'&&<section className="view plan"><div className="view-title">Planta · {current.name}</div><svg ref={planRef} className="plan-svg" viewBox={`${-layout.width/2-t-1} ${-d/2-t-1} ${layout.width+2*t+2} ${d+2*t+2}`} aria-label="Planta dos ambientes conectados" onPointerMove={moveDrag} onPointerUp={endDrag}>
-        {layout.rooms.map(e=><rect key={e.id} x={e.left} y={-d/2} width={e.room.width} height={d} fill={current.id===e.id?'#e1eff6':'#f2f4f5'} onClick={()=>pick(`${e.id}:F01`)}/>)}
-        {displayMeshes.flatMap((m,i)=>{const zs=m.vertices.map(v=>v[2]);if(Math.min(...zs)>1.2||Math.max(...zs)<1.2)return[];const xs=m.vertices.map(v=>v[0]),ys=m.vertices.map(v=>-v[1]);const opening=m.id.includes(':D01')||m.id.includes(':J01')||m.id.startsWith('link:');const fill=selected===m.id?'#168ac0':(m as IfcMesh).material?materialColor((m as IfcMesh).material!):opening?'#a38b6b':'#657a88';
+        {layout.rooms.map(e=><rect key={e.id} x={e.left} y={-d/2} width={e.room.width} height={d} fill={current.id===e.id?'#262b30':'#1e2226'} onClick={()=>pick(`${e.id}:F01`)}/>)}
+        {displayMeshes.flatMap((m,i)=>{const zs=m.vertices.map(v=>v[2]);if(Math.min(...zs)>1.2||Math.max(...zs)<1.2)return[];const xs=m.vertices.map(v=>v[0]),ys=m.vertices.map(v=>-v[1]);const opening=m.id.includes(':D01')||m.id.includes(':J01')||m.id.startsWith('link:');const fill=selected===m.id?'#3fa9e0':(m as IfcMesh).material?materialColor((m as IfcMesh).material!):opening?'#8a6f52':'#5b6771';
           const [roomId,part]=m.id.split(':');const engineRoom=engineMeshes[roomId]&&house.rooms.find(r=>r.id===roomId)?.room;
           if(engineRoom&&(part==='P01'||part==='P02'||part.startsWith('P01-')||part.startsWith('P02-'))){const entry=layout.rooms.find(e=>e.id===roomId)!;const {offset,width}=part.startsWith('P01')?{offset:engineRoom.windowOffset,width:engineRoom.windowWidth}:{offset:engineRoom.doorOffset,width:engineRoom.doorWidth};const gapLeft=entry.center-engineRoom.width/2+offset,gapRight=gapLeft+width,minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);return[<rect key={`${i}a`} x={minX} y={minY} width={gapLeft-minX} height={maxY-minY} fill={fill} onClick={()=>pick(m.id)}/>,<rect key={`${i}b`} x={gapRight} y={minY} width={maxX-gapRight} height={maxY-minY} fill={fill} onClick={()=>pick(m.id)}/>];}
           return[<rect key={i} x={Math.min(...xs)} y={Math.min(...ys)} width={Math.max(...xs)-Math.min(...xs)} height={Math.max(...ys)-Math.min(...ys)} fill={fill} onClick={()=>pick(m.id)}/>];})}
@@ -146,9 +171,35 @@ export default function RoomEditor(){
           <rect x={e.left} y={d/2} width={e.room.width} height={t} fill="transparent" style={{cursor:'ew-resize',touchAction:'none'}} pointerEvents="all" onPointerDown={ev=>beginDrag(ev,e.id,'doorOffset',e.room.doorWidth)}/>
           <rect x={e.left} y={-d/2-t} width={e.room.width} height={t} fill="transparent" style={{cursor:'ew-resize',touchAction:'none'}} pointerEvents="all" onPointerDown={ev=>beginDrag(ev,e.id,'windowOffset',e.room.windowWidth)}/>
         </g>)}
-        {layout.rooms.map(e=><g key={e.id} onClick={()=>pick(`${e.id}:F01`)} style={{cursor:'pointer'}}><text x={e.center} y="-.15" fontSize=".22" textAnchor="middle" fill="#425d6d">{e.name}</text><text x={e.center} y=".2" fontSize=".18" textAnchor="middle" fill="#687e8d">{e.room.width.toFixed(2)} × {d.toFixed(2)} m</text></g>)}
+        {layout.rooms.map(e=><g key={e.id} onClick={()=>pick(`${e.id}:F01`)} style={{cursor:'pointer'}}><text x={e.center} y="-.15" fontSize=".22" textAnchor="middle" fill="#c3ccd3">{e.name}</text><text x={e.center} y=".2" fontSize=".18" textAnchor="middle" fill="#8b95a0">{e.room.width.toFixed(2)} × {d.toFixed(2)} m</text></g>)}
       </svg></section>}
       {view!=='plan'&&<section className="view three"><Viewport walls={[]} meshes={displayMeshes} selected={selected} onSelect={pick} onPick={onPick} reset={reset} hideFloor wireframe={wireframeOn} sectionCut={sectionCutOn}/><div className="view-caption">Arraste para orbitar · roda para aproximar · clique num elemento mostra a coordenada exata (abra "Ferramentas de depuração")</div></section>}
-    </div></div></div><footer><span role="status">{message}</span><span className="footer-right">{pickHistory[0]?`Último clique: x=${pickHistory[0][0].toFixed(3)} y=${pickHistory[0][1].toFixed(3)} z(altura)=${pickHistory[0][2].toFixed(3)}`:'Geometria demonstrativa · sem recálculo IFC'}</span></footer>
+    </div></div>
+    <aside className="properties inspector"><h2>Propriedades<span>{isWallSelected?elementNames[selPart]:name(selected)}</span></h2>
+      {isWallSelected?<>
+        <section>
+          <h3>Camadas</h3>
+          {selectedLayers.map((l,i)=><div key={i} className="layer-row">
+            <input className="layer-name" value={l.material} onChange={e=>updateLayer(i,{material:e.target.value})} aria-label="Material da camada"/>
+            <input type="number" step="0.005" min="0.005" max="0.5" value={l.thickness} onChange={e=>updateLayer(i,{thickness:Number(e.target.value)})} aria-label="Espessura da camada (m)"/>
+            <button onClick={()=>removeLayer(i)} title="Remover camada">×</button>
+          </div>)}
+          <button onClick={addLayer} style={{marginTop:'8px'}}>+ Camada em branco</button>
+          {selectedLayers.length>0&&<p className="hint">Espessura oficial (layout/telhado): {t.toFixed(2)} m · soma das camadas (visual): {selectedLayers.reduce((s,l)=>s+l.thickness,0).toFixed(3)} m</p>}
+        </section>
+        <section aria-label="Catálogo de tijolos e blocos"><h3>Catálogo</h3>
+          <div className="brick-strip">
+            {brickCatalog.map(brick=><button key={brick.id} className="brick-card" onClick={()=>addBrickLayer(brick)} title={`Adicionar camada: ${brick.name} (${(brick.width*100).toFixed(1)} cm)`}>
+              <span className="brick-thumb"><img src={sitePath(brick.image)} alt={brick.name} onError={e=>{(e.target as HTMLImageElement).style.display='none';}}/></span>
+              <span className="name">{brick.name}</span>
+              <span className="meta">{(brick.width*100).toFixed(1)} cm · {brick.piecesPerM2}/m²</span>
+            </button>)}
+          </div>
+        </section>
+        <section><h3>Material estrutural</h3><label style={{opacity:.4}}><span>Resistência</span><Lock size={13}/></label></section>
+      </>:<div className="empty-inspector">{isEngineAvailable()?'Selecione uma parede (P01-P04) para editar as camadas.':'Ligue o motor real (IFC) para editar camadas de parede.'}</div>}
+    </aside>
+    </div>
+    <footer><span role="status">{message}</span><span className="footer-right">{pickHistory[0]?`Último clique: x=${pickHistory[0][0].toFixed(3)} y=${pickHistory[0][1].toFixed(3)} z(altura)=${pickHistory[0][2].toFixed(3)}`:'Geometria demonstrativa · sem recálculo IFC'}</span></footer>
   </main>;
 }

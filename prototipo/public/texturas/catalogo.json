@@ -1,0 +1,366 @@
+{
+  "version": 1,
+  "status": "visual-prototype",
+  "generator": "image_gen built-in",
+  "pathsRelativeTo": "public/",
+  "walls": [
+    {
+      "id": "baiano-6",
+      "label": "Tijolo baiano — 6 furos",
+      "baseColor": {
+        "path": "texturas/pbr/baiano-6/basecolor.jpg",
+        "width": 1254,
+        "height": 1254
+      },
+      "normal": {
+        "path": "texturas/pbr/baiano-6/normal.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "roughness": {
+        "path": "texturas/pbr/baiano-6/roughness.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "texture": "texturas/baiano-6.jpg",
+      "thumbnail": "texturas/catalogo/baiano-6.jpg",
+      "metalness": 0,
+      "roughnessFactor": 1,
+      "normalScale": 0.35,
+      "tileableVerified": false,
+      "physicalScaleMeters": null
+    },
+    {
+      "id": "baiano-8",
+      "label": "Tijolo baiano — 8 furos",
+      "baseColor": {
+        "path": "texturas/pbr/baiano-8/basecolor.jpg",
+        "width": 1254,
+        "height": 1254
+      },
+      "normal": {
+        "path": "texturas/pbr/baiano-8/normal.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "roughness": {
+        "path": "texturas/pbr/baiano-8/roughness.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "texture": "texturas/baiano-8.jpg",
+      "thumbnail": "texturas/catalogo/baiano-8.jpg",
+      "metalness": 0,
+      "roughnessFactor": 1,
+      "normalScale": 0.35,
+      "tileableVerified": false,
+      "physicalScaleMeters": null
+    },
+    {
+      "id": "baiano-9",
+      "label": "Tijolo baiano — 9 furos",
+      "baseColor": {
+        "path": "texturas/pbr/baiano-9/basecolor.jpg",
+        "width": 1254,
+        "height": 1254
+      },
+      "normal": {
+        "path": "texturas/pbr/baiano-9/normal.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "roughness": {
+        "path": "texturas/pbr/baiano-9/roughness.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "texture": "texturas/baiano-9.jpg",
+      "thumbnail": "texturas/catalogo/baiano-9.jpg",
+      "metalness": 0,
+      "roughnessFactor": 1,
+      "normalScale": 0.35,
+      "tileableVerified": false,
+      "physicalScaleMeters": null
+    },
+    {
+      "id": "ceramico-estrutural",
+      "label": "Bloco cerâmico estrutural",
+      "baseColor": {
+        "path": "texturas/pbr/ceramico-estrutural/basecolor.jpg",
+        "width": 1536,
+        "height": 1024
+      },
+      "normal": {
+        "path": "texturas/pbr/ceramico-estrutural/normal.png",
+        "width": 1536,
+        "height": 1024
+      },
+      "roughness": {
+        "path": "texturas/pbr/ceramico-estrutural/roughness.png",
+        "width": 1536,
+        "height": 1024
+      },
+      "texture": "texturas/ceramico-estrutural.jpg",
+      "thumbnail": "texturas/catalogo/ceramico-estrutural.jpg",
+      "metalness": 0,
+      "roughnessFactor": 1,
+      "normalScale": 0.35,
+      "tileableVerified": false,
+      "physicalScaleMeters": null
+    },
+    {
+      "id": "bloco-concreto",
+      "label": "Bloco de concreto",
+      "baseColor": {
+        "path": "texturas/pbr/bloco-concreto/basecolor.jpg",
+        "width": 1536,
+        "height": 1024
+      },
+      "normal": {
+        "path": "texturas/pbr/bloco-concreto/normal.png",
+        "width": 1536,
+        "height": 1024
+      },
+      "roughness": {
+        "path": "texturas/pbr/bloco-concreto/roughness.png",
+        "width": 1536,
+        "height": 1024
+      },
+      "texture": "texturas/bloco-concreto.jpg",
+      "thumbnail": "texturas/catalogo/bloco-concreto.jpg",
+      "metalness": 0,
+      "roughnessFactor": 1,
+      "normalScale": 0.35,
+      "tileableVerified": false,
+      "physicalScaleMeters": null
+    },
+    {
+      "id": "tijolo-macico",
+      "label": "Tijolo maciço",
+      "baseColor": {
+        "path": "texturas/pbr/tijolo-macico/basecolor.jpg",
+        "width": 1536,
+        "height": 1024
+      },
+      "normal": {
+        "path": "texturas/pbr/tijolo-macico/normal.png",
+        "width": 1536,
+        "height": 1024
+      },
+      "roughness": {
+        "path": "texturas/pbr/tijolo-macico/roughness.png",
+        "width": 1536,
+        "height": 1024
+      },
+      "texture": "texturas/tijolo-macico.jpg",
+      "thumbnail": "texturas/catalogo/tijolo-macico.jpg",
+      "metalness": 0,
+      "roughnessFactor": 1,
+      "normalScale": 0.35,
+      "tileableVerified": false,
+      "physicalScaleMeters": null
+    }
+  ],
+  "materials": [
+    {
+      "id": "ceramica-natural",
+      "label": "Cerâmica natural",
+      "baseColor": {
+        "path": "texturas/materiais/ceramica-natural/basecolor.jpg",
+        "width": 1254,
+        "height": 1254
+      },
+      "normal": {
+        "path": "texturas/materiais/ceramica-natural/normal.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "roughness": {
+        "path": "texturas/materiais/ceramica-natural/roughness.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "metalness": 0,
+      "roughnessFactor": 1,
+      "roughnessFallback": 0.9,
+      "normalScale": 0.25,
+      "tileableVerified": false,
+      "physicalScaleMeters": null
+    },
+    {
+      "id": "ceramica-macica",
+      "label": "Cerâmica maciça",
+      "baseColor": {
+        "path": "texturas/materiais/ceramica-macica/basecolor.jpg",
+        "width": 1254,
+        "height": 1254
+      },
+      "normal": {
+        "path": "texturas/materiais/ceramica-macica/normal.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "roughness": {
+        "path": "texturas/materiais/ceramica-macica/roughness.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "metalness": 0,
+      "roughnessFactor": 1,
+      "roughnessFallback": 0.92,
+      "normalScale": 0.25,
+      "tileableVerified": false,
+      "physicalScaleMeters": null
+    },
+    {
+      "id": "concreto-bloco",
+      "label": "Concreto de bloco",
+      "baseColor": {
+        "path": "texturas/materiais/concreto-bloco/basecolor.jpg",
+        "width": 1254,
+        "height": 1254
+      },
+      "normal": {
+        "path": "texturas/materiais/concreto-bloco/normal.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "roughness": {
+        "path": "texturas/materiais/concreto-bloco/roughness.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "metalness": 0,
+      "roughnessFactor": 1,
+      "roughnessFallback": 0.94,
+      "normalScale": 0.25,
+      "tileableVerified": false,
+      "physicalScaleMeters": null
+    },
+    {
+      "id": "argamassa-assentamento",
+      "label": "Argamassa de assentamento",
+      "baseColor": {
+        "path": "texturas/materiais/argamassa-assentamento/basecolor.jpg",
+        "width": 1254,
+        "height": 1254
+      },
+      "normal": {
+        "path": "texturas/materiais/argamassa-assentamento/normal.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "roughness": {
+        "path": "texturas/materiais/argamassa-assentamento/roughness.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "metalness": 0,
+      "roughnessFactor": 1,
+      "roughnessFallback": 0.93,
+      "normalScale": 0.25,
+      "tileableVerified": false,
+      "physicalScaleMeters": null
+    },
+    {
+      "id": "chapisco",
+      "label": "Chapisco",
+      "baseColor": {
+        "path": "texturas/materiais/chapisco/basecolor.jpg",
+        "width": 1254,
+        "height": 1254
+      },
+      "normal": {
+        "path": "texturas/materiais/chapisco/normal.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "roughness": {
+        "path": "texturas/materiais/chapisco/roughness.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "metalness": 0,
+      "roughnessFactor": 1,
+      "roughnessFallback": 0.98,
+      "normalScale": 0.25,
+      "tileableVerified": false,
+      "physicalScaleMeters": null
+    },
+    {
+      "id": "emboco",
+      "label": "Emboço",
+      "baseColor": {
+        "path": "texturas/materiais/emboco/basecolor.jpg",
+        "width": 1254,
+        "height": 1254
+      },
+      "normal": {
+        "path": "texturas/materiais/emboco/normal.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "roughness": {
+        "path": "texturas/materiais/emboco/roughness.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "metalness": 0,
+      "roughnessFactor": 1,
+      "roughnessFallback": 0.93,
+      "normalScale": 0.25,
+      "tileableVerified": false,
+      "physicalScaleMeters": null
+    },
+    {
+      "id": "reboco",
+      "label": "Reboco",
+      "baseColor": {
+        "path": "texturas/materiais/reboco/basecolor.jpg",
+        "width": 1254,
+        "height": 1254
+      },
+      "normal": {
+        "path": "texturas/materiais/reboco/normal.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "roughness": {
+        "path": "texturas/materiais/reboco/roughness.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "metalness": 0,
+      "roughnessFactor": 1,
+      "roughnessFallback": 0.86,
+      "normalScale": 0.25,
+      "tileableVerified": false,
+      "physicalScaleMeters": null
+    },
+    {
+      "id": "pintura-branca",
+      "label": "Pintura branca",
+      "baseColor": {
+        "path": "texturas/materiais/pintura-branca/basecolor.jpg",
+        "width": 1254,
+        "height": 1254
+      },
+      "normal": {
+        "path": "texturas/materiais/pintura-branca/normal.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "roughness": {
+        "path": "texturas/materiais/pintura-branca/roughness.png",
+        "width": 1254,
+        "height": 1254
+      },
+      "metalness": 0,
+      "roughnessFactor": 1,
+      "roughnessFallback": 0.8,
+      "normalScale": 0.25,
+      "tileableVerified": false,
+      "physicalScaleMeters": null
+    }
+  ]
+}

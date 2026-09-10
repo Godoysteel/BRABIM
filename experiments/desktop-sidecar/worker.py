@@ -7,10 +7,10 @@ import ifcopenshell, ifcopenshell.api as api, ifcopenshell.geom
 from ifcopenshell.api.geometry.add_wall_representation import add_wall_representation
 import numpy as np
 
-from OCP.gp import gp_Pnt, gp_Dir, gp_Pln
+from OCP.gp import gp_Pnt, gp_Dir, gp_Pln, gp_Ax2
 from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeFace
-from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox, BRepPrimAPI_MakeHalfSpace
-from OCP.BRepAlgoAPI import BRepAlgoAPI_Common, BRepAlgoAPI_Cut
+from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox, BRepPrimAPI_MakeHalfSpace, BRepPrimAPI_MakeCylinder
+from OCP.BRepAlgoAPI import BRepAlgoAPI_Common, BRepAlgoAPI_Cut, BRepAlgoAPI_Fuse
 from OCP.BRepMesh import BRepMesh_IncrementalMesh
 from OCP.BRep import BRep_Tool
 from OCP.TopLoc import TopLoc_Location
@@ -59,6 +59,21 @@ def _triangulate_occt(solid):
                 faces.append((base + a - 1, base + b - 1, base + c - 1))
         exp.Next()
     return vertices, faces
+
+
+# Rough default tile size for a wall-layer texture (1 image = ~1m of wall),
+# not a verified physical scale -- see public/texturas/LEIA-ME.md, which
+# explicitly flags tiling/scale as unverified. UV comes straight from the
+# already-exported world-space vertices, not from the OCCT triangulation
+# used to build the IFC representation (that one gets discarded and
+# re-triangulated by ifcopenshell.geom when read back for display, so
+# baking UV any earlier than this would never survive the round trip).
+TEXTURE_TILE_METERS = 1.0
+
+
+def _wall_uv(v, wall_name):
+    i, j = (0, 2) if wall_name in ('P01', 'P02') else (1, 2)
+    return (v[:, [i, j]] / TEXTURE_TILE_METERS).tolist()
 
 
 def _roof_mass(width, depth, eave_height, slope, sloped_edges, overhang, anchor_height):
@@ -257,19 +272,24 @@ LINTEL_HEIGHT = 0.1
 LINTEL_BEARING = 0.15
 
 
-def add_lintel(f, body, storey, name, axis_origin, along_offset, width, z0, z1, wall_thickness, predefined_type, bearing=LINTEL_BEARING):
-    """A concrete beam spanning an opening: `verga` above it (predefined_type
-    'LINTEL') or `contraverga` below a window's sill (no matching
-    IfcBeamTypeEnum value exists for that, so it's just 'BEAM'). Reuses
-    the exact opening position/width already computed for the void cut --
-    extends `bearing` past each side so it actually rests on wall, not
-    just spans the hole.
-    """
+def _lintel_extents(axis_origin, along_offset, width, z0, z1, wall_thickness, bearing=LINTEL_BEARING):
     x0 = axis_origin[0] + along_offset - bearing
     x1 = x0 + width + 2 * bearing
     y0 = axis_origin[1] - wall_thickness / 2
     y1 = axis_origin[1] + wall_thickness / 2
-    box = BRepPrimAPI_MakeBox(gp_Pnt(x0, y0, z0), gp_Pnt(x1, y1, z1)).Shape()
+    return x0, x1, y0, y1, z0, z1
+
+
+def add_lintel(f, body, storey, name, box, predefined_type):
+    """A concrete beam spanning an opening: `verga` above it (predefined_type
+    'LINTEL') or `contraverga` below a window's sill (no matching
+    IfcBeamTypeEnum value exists for that, so it's just 'BEAM'). `box`
+    comes from _lintel_extents -- shared with build_room's layer cut so
+    the layer material doesn't keep occupying the same space above the
+    opening, which produced two exactly coincident faces there (the
+    layer's own frame above the void, and the lintel on top of it) and
+    z-fought on screen.
+    """
     vertices, faces = _triangulate_occt(box)
     beam = api.run('root.create_entity', f, ifc_class='IfcBeam', name=name, predefined_type=predefined_type)
     api.run('spatial.assign_container', f, products=[beam], relating_structure=storey)
@@ -278,7 +298,100 @@ def add_lintel(f, body, storey, name, axis_origin, along_offset, width, z0, z1, 
     api.run('geometry.edit_object_placement', f, product=beam)
     return beam
 
-def build_room(width, depth, height, thickness, door=None, window=None, roof=None, layers=None, contraverga=False):
+
+REBAR_COVER = 0.025  # common concrete cover, not a calculated value
+
+
+def _stirrup_ring(x, y0, y1, z0, z1, r):
+    """A rectangular ring in the y-z cross-section at position x: four
+    cylinder segments (an approximation of a single bent wire -- corners
+    overlap rather than mitre, close enough at rebar scale to read
+    correctly on screen), triangulated and merged in plain Python instead
+    of an OCCT boolean Fuse. A real CAD union of four solids per stirrup,
+    times a stirrup every ~15cm along every reinforced beam, measured at
+    over 10 seconds for a single room -- far too slow for a UI that
+    recomputes on every keystroke. The pieces don't need to be one
+    topological solid to look right or to sit in one mesh representation,
+    so skipping the boolean (and the per-call OCCT overhead that comes
+    with it) is a straightforward, meaningful win, not a shortcut that
+    costs correctness.
+    """
+    segments = [
+        BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(x, y0, z0), gp_Dir(0, 1, 0)), r, y1 - y0).Shape(),
+        BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(x, y0, z1), gp_Dir(0, 1, 0)), r, y1 - y0).Shape(),
+        BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(x, y0, z0), gp_Dir(0, 0, 1)), r, z1 - z0).Shape(),
+        BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(x, y1, z0), gp_Dir(0, 0, 1)), r, z1 - z0).Shape(),
+    ]
+    vertices, faces = [], []
+    for seg in segments:
+        v, fc = _triangulate_occt(seg)
+        base = len(vertices)
+        vertices.extend(v)
+        faces.extend((a + base, b + base, c + base) for a, b, c in fc)
+    return vertices, faces
+
+
+def _reinforce_beam(x0, x1, y0, y1, z0, z1, long_diam, long_count, stirrup_diam, stirrup_spacing):
+    """Real rebar geometry for any axis-aligned box-shaped concrete
+    element, generic on purpose so the same function covers a future
+    cinta/viga, not just today's verga/contraverga: longitudinal bars
+    run the box's long axis (x), split evenly between a bottom and top
+    row inset by REBAR_COVER from each face; stirrups are rectangular
+    rings around the cross-section at `stirrup_spacing` along x. This is
+    geometry and quantitative mass, not a structural calculation -- bar
+    count/diameter/spacing are the caller's choice, not something this
+    derives from load or span.
+    """
+    yc0, yc1 = y0 + REBAR_COVER, y1 - REBAR_COVER
+    zc0, zc1 = z0 + REBAR_COVER, z1 - REBAR_COVER
+    def row(n, z):
+        if n <= 0:
+            return []
+        if n == 1:
+            return [((yc0 + yc1) / 2, z)]
+        return [(yc0 + i * (yc1 - yc0) / (n - 1), z) for i in range(n)]
+    bottom_n = (long_count + 1) // 2
+    top_n = long_count - bottom_n
+    long_r, length = long_diam / 2, x1 - x0
+    longitudinal = [BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(x0, y, z), gp_Dir(1, 0, 0)), long_r, length).Shape() for y, z in row(bottom_n, zc0) + row(top_n, zc1)]
+    stirrup_r = stirrup_diam / 2
+    margin = max(REBAR_COVER, stirrup_r * 2)
+    # Every stirrup along one beam shares the same cross-section -- build
+    # the ring's geometry once (the OCCT construction + triangulation
+    # that dominated the cost here) and just shift its x coordinate in
+    # plain Python for each repeat, instead of re-running OCCT per ring.
+    template_v, template_f = _stirrup_ring(0.0, yc0, yc1, zc0, zc1, stirrup_r)
+    stirrups, x = [], x0 + margin
+    while x <= x1 - margin:
+        stirrups.append(([(vx + x, vy, vz) for vx, vy, vz in template_v], template_f))
+        x += stirrup_spacing
+    return longitudinal, stirrups
+
+
+def add_reinforcement(f, body, storey, name_prefix, longitudinal, stirrups):
+    entities = []
+    for i, bar in enumerate(longitudinal):
+        vertices, faces = _triangulate_occt(bar)
+        if not vertices:
+            continue
+        e = api.run('root.create_entity', f, ifc_class='IfcReinforcingBar', name=f'{name_prefix}-FERRO-{i+1}', predefined_type='MAIN')
+        api.run('spatial.assign_container', f, products=[e], relating_structure=storey)
+        rep = api.run('geometry.add_mesh_representation', f, context=body, vertices=[vertices], faces=[faces])
+        api.run('geometry.assign_representation', f, product=e, representation=rep)
+        api.run('geometry.edit_object_placement', f, product=e)
+        entities.append(e)
+    for i, (vertices, faces) in enumerate(stirrups):
+        if not vertices:
+            continue
+        e = api.run('root.create_entity', f, ifc_class='IfcReinforcingBar', name=f'{name_prefix}-ESTRIBO-{i+1}', predefined_type='RING')
+        api.run('spatial.assign_container', f, products=[e], relating_structure=storey)
+        rep = api.run('geometry.add_mesh_representation', f, context=body, vertices=[vertices], faces=[faces])
+        api.run('geometry.assign_representation', f, product=e, representation=rep)
+        api.run('geometry.edit_object_placement', f, product=e)
+        entities.append(e)
+    return entities
+
+def build_room(width, depth, height, thickness, door=None, window=None, roof=None, layers=None, contraverga=False, rebar=None):
     w, d, h, t = width, depth, height, thickness
     # Rectangle loop: north, south, west, east walls, joined at all 4 corners.
     base = [
@@ -325,27 +438,73 @@ def build_room(width, depth, height, thickness, door=None, window=None, roof=Non
     # collide with the P0X-<material> id scheme wall layers use -- the
     # plan view's window/door gap-split logic keys off that "P0X-" prefix
     # and would otherwise slice a lintel in half at the opening's gap.
-    lintel_entities = []
+    # A lintel spans the wall's own thickness, not the room's nominal `t` --
+    # once a wall has layers, its real (visual) thickness can differ from
+    # `t` (shown in the UI as "espessura oficial" vs "soma das camadas"),
+    # and a lintel still sized to `t` then juts out past a thinner layered
+    # face or sits recessed behind a thicker one.
+    def _wall_thickness(name):
+        wall_layers = (layers or {}).get(name)
+        return sum(l[1] for l in wall_layers) if wall_layers else t
+
+    def _reinforce(name_prefix, extents):
+        if not rebar:
+            return
+        long_diam, long_count = rebar['longitudinal']
+        stirrup_diam, spacing = rebar['stirrup']
+        longitudinal, stirrups = _reinforce_beam(*extents, long_diam, long_count, stirrup_diam, spacing)
+        lintel_entities.extend(add_reinforcement(f, body, storey, name_prefix, longitudinal, stirrups))
+
+    def _box_from_extents(extents):
+        x0, x1, y0, y1, z0, z1 = extents
+        return BRepPrimAPI_MakeBox(gp_Pnt(x0, y0, z0), gp_Pnt(x1, y1, z1)).Shape()
+
+    lintel_entities, lintel_boxes = [], {}
     if door:
         add_opening(f, body, walls[1], base[1][0], door['offset'], door['width'], door['height'], 0, t)
-        lintel_entities.append(add_lintel(f, body, storey, 'VERGA-P02', base[1][0], door['offset'], door['width'], door['height'], door['height'] + LINTEL_HEIGHT, t, 'LINTEL'))
+        extents = _lintel_extents(base[1][0], door['offset'], door['width'], door['height'], door['height'] + LINTEL_HEIGHT, _wall_thickness('P02'))
+        verga_box = _box_from_extents(extents)
+        lintel_entities.append(add_lintel(f, body, storey, 'VERGA-P02', verga_box, 'LINTEL'))
+        lintel_boxes.setdefault('P02', []).append(verga_box)
+        _reinforce('VERGA-P02', extents)
     if window:
         add_opening(f, body, walls[0], base[0][0], window['offset'], window['width'], window['height'], window['sill'], t)
         top = window['sill'] + window['height']
-        lintel_entities.append(add_lintel(f, body, storey, 'VERGA-P01', base[0][0], window['offset'], window['width'], top, top + LINTEL_HEIGHT, t, 'LINTEL'))
+        window_thickness = _wall_thickness('P01')
+        extents = _lintel_extents(base[0][0], window['offset'], window['width'], top, top + LINTEL_HEIGHT, window_thickness)
+        verga_box = _box_from_extents(extents)
+        lintel_entities.append(add_lintel(f, body, storey, 'VERGA-P01', verga_box, 'LINTEL'))
+        lintel_boxes.setdefault('P01', []).append(verga_box)
+        _reinforce('VERGA-P01', extents)
         if contraverga:
-            lintel_entities.append(add_lintel(f, body, storey, 'CONTRAVERGA-P01', base[0][0], window['offset'], window['width'], window['sill'] - LINTEL_HEIGHT, window['sill'], t, 'BEAM'))
+            contra_extents = _lintel_extents(base[0][0], window['offset'], window['width'], window['sill'] - LINTEL_HEIGHT, window['sill'], window_thickness)
+            contra_box = _box_from_extents(contra_extents)
+            lintel_entities.append(add_lintel(f, body, storey, 'CONTRAVERGA-P01', contra_box, 'BEAM'))
+            lintel_boxes.setdefault('P01', []).append(contra_box)
+            _reinforce('CONTRAVERGA-P01', contra_extents)
 
     # Layer entities per wall -- each wall can carry its own sandwich
     # (e.g. render only on the street-facing side), keyed by name so a
     # wall with no entry just keeps its plain single-box representation.
-    # Openings cut through every layer of whichever wall has them.
+    # The cut region for each wall's layers is the door/window void fused
+    # with that wall's own lintel boxes -- without the fuse, the layer's
+    # own frame material still filled the band above/below the opening
+    # where a verga/contraverga now also sits, two exactly coincident
+    # faces in the same place that z-fought on screen.
     layer_entities = {}
     if layers:
         opening_thickness_pad = t + 0.3
+        def _cut_region(name, base_opening):
+            boxes = ([base_opening] if base_opening is not None else []) + lintel_boxes.get(name, [])
+            if not boxes:
+                return None
+            region = boxes[0]
+            for b in boxes[1:]:
+                region = BRepAlgoAPI_Fuse(region, b).Shape()
+            return region
         openings = {
-            'P01': _opening_box_world(base[0][0], window['offset'], window['width'], window['height'], window['sill'], opening_thickness_pad) if window else None,
-            'P02': _opening_box_world(base[1][0], door['offset'], door['width'], door['height'], 0, opening_thickness_pad) if door else None,
+            'P01': _cut_region('P01', _opening_box_world(base[0][0], window['offset'], window['width'], window['height'], window['sill'], opening_thickness_pad) if window else None),
+            'P02': _cut_region('P02', _opening_box_world(base[1][0], door['offset'], door['width'], door['height'], 0, opening_thickness_pad) if door else None),
         }
         for i, (a, b) in enumerate(base):
             name = f'P{i+1:02}'
@@ -382,12 +541,12 @@ def build_room(width, depth, height, thickness, door=None, window=None, roof=Non
         v = np.array(shape.geometry.verts).reshape(-1, 3)
         faces = np.array(shape.geometry.faces).reshape(-1, 3)
         meshes.append({'id': wall.Name, 'guid': wall.GlobalId, 'vertices': v.tolist(), 'faces': faces.tolist()})
-    for wall_entities in layer_entities.values():
+    for wall_name, wall_entities in layer_entities.items():
         for material, layer_wall in wall_entities:
             shape = ifcopenshell.geom.create_shape(settings, layer_wall)
             v = np.array(shape.geometry.verts).reshape(-1, 3)
             faces = np.array(shape.geometry.faces).reshape(-1, 3)
-            meshes.append({'id': layer_wall.Name, 'guid': layer_wall.GlobalId, 'material': material, 'vertices': v.tolist(), 'faces': faces.tolist()})
+            meshes.append({'id': layer_wall.Name, 'guid': layer_wall.GlobalId, 'material': material, 'vertices': v.tolist(), 'faces': faces.tolist(), 'uv': _wall_uv(v, wall_name)})
     if roof_entity:
         shape = ifcopenshell.geom.create_shape(settings, roof_entity)
         v = np.array(shape.geometry.verts).reshape(-1, 3)
@@ -402,7 +561,15 @@ def build_room(width, depth, height, thickness, door=None, window=None, roof=Non
         shape = ifcopenshell.geom.create_shape(settings, beam)
         v = np.array(shape.geometry.verts).reshape(-1, 3)
         faces = np.array(shape.geometry.faces).reshape(-1, 3)
-        meshes.append({'id': beam.Name, 'guid': beam.GlobalId, 'material': 'Concreto', 'vertices': v.tolist(), 'faces': faces.tolist()})
+        is_rebar = beam.is_a('IfcReinforcingBar')
+        material = 'Aço' if is_rebar else 'Concreto'
+        mesh = {'id': beam.Name, 'guid': beam.GlobalId, 'material': material, 'vertices': v.tolist(), 'faces': faces.tolist()}
+        if not is_rebar:
+            # Verga/contraverga are always north-south oriented (only P01/P02
+            # ever get a door or window), so the P01 axis pair (x, height)
+            # is correct here regardless of which wall the beam belongs to.
+            mesh['uv'] = _wall_uv(v, 'P01')
+        meshes.append(mesh)
     return meshes
 
 def main():
@@ -425,6 +592,7 @@ def main():
                 roof=req['roof'] if req.get('roof') else None,
                 layers={name: [(l['material'], float(l['thickness'])) for l in wl] for name, wl in req['wallLayers'].items()} if req.get('wallLayers') else None,
                 contraverga=bool(req.get('contraverga', False)),
+                rebar={'longitudinal': (float(req['rebar']['longitudinal']['diameter']), int(req['rebar']['longitudinal']['count'])), 'stirrup': (float(req['rebar']['stirrup']['diameter']), float(req['rebar']['stirrup']['spacing']))} if req.get('rebar') else None,
             )
             print(json.dumps({'type': 'result', 'id': req.get('id'), 'elapsed_seconds': round(time.perf_counter() - t0, 3), 'meshes': meshes}), flush=True)
         except Exception as e:
