@@ -21,7 +21,7 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 | IfcOpenShell | Versão 0.8.5; integrado de verdade ao app desktop via processo local (sidecar) — ver [integração](../03-arquitetura/integracao-ifcopenshell.md). Cobre o retângulo de 4 paredes de um ambiente isolado, com porta, janela, telhado (4 águas, OCCT) e agora pilares/viga de cinta cortados/calculados de verdade, com armação real opcional; piso e ambientes conectados ainda não |
 | Público prioritário | Estudante; modelo comercial confirmado ([0007](../04-decisoes/0007-publico-estudante-comercial.md)); não validado pela pesquisa existente (feita com profissionais atuantes) |
 | MVP comercial | Não definido |
-| Plataforma final | Desktop — decidido; empacotamento (Tauri + sidecar IfcOpenShell) validado de ponta a ponta ([0006](../04-decisoes/0006-plataforma-desktop-e-retorno-ifcopenshell.md)) |
+| Plataforma final | Desktop — decidido; empacotamento (Tauri + sidecar IfcOpenShell/OCCT) validado de ponta a ponta, incluindo instalador Windows real gerado e testado localmente ([0006](../04-decisoes/0006-plataforma-desktop-e-retorno-ifcopenshell.md), [detalhes](../../experiments/desktop-sidecar/README.md#ponta-tauri-fechada-instalador-real-gerado-e-testado-10092026)) |
 | Custos | Sem benchmark ou orçamento mensal calculado |
 | Licenciamento | Pendente ([0002](../04-decisoes/0002-reutilizacao-e-ifcopenshell.md)) — revisão jurídica da licença LGPL do IfcOpenShell/OCCT antes de cobrar por qualquer versão; se inviável, IfcOpenShell/OCCT são dispensados |
 
@@ -42,6 +42,7 @@ Reaproveitar o Esboce é uma possibilidade, não uma escolha de base de código:
 5. Expor controles de inclinação/beiral do telhado na interface (hoje fixos no código) e testar contornos não retangulares.
 6. Resolver a pendência de licenciamento (LGPL) antes de qualquer cobrança; Paulo e Diego podem testar o protótipo público pelo link.
 7. Otimizar o recálculo quando "Estrutura" e "Armação" estão ligados juntos (~4 s por edição hoje, ver [integração](../03-arquitetura/integracao-ifcopenshell.md#pilares-e-vigas-cinta-reais-10092026)), se isso incomodar no uso real.
+8. Testar a instalação de fato do `.msi`/`setup.exe` gerados (só o `app.exe` cru foi testado), assinatura de código (hoje sem assinatura — Windows deve alertar como "editor desconhecido") e empacotamento para macOS/Linux.
 
 Não há prazo, orçamento, contas de colaboradores ou compromissos individuais confirmados.
 

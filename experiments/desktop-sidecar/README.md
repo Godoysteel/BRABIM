@@ -35,3 +35,23 @@ Não testa a parte Tauri (Rust não estava disponível neste ambiente) — só v
 ## Conclusão
 
 O maior risco de empacotar o IfcOpenShell — a biblioteca ser compilada/nativa e não um pacote Python puro — está resolvido: o PyInstaller consegue empacotá-la com os ajustes acima, e o padrão de processo de longa duração dá respostas rápidas o bastante para edição ao vivo. Falta fechar a ponta Tauri (instalar Rust, configurar o sidecar de verdade) para ter o caminho completo validado.
+
+## Ponta Tauri fechada: instalador real gerado e testado (10/09/2026)
+
+Rust (`rustup`, toolchain `stable-x86_64-pc-windows-msvc`) e o Visual Studio Build Tools (MSVC) já estavam instalados nesta máquina, sem precisar instalar nada — só faltava `~/.cargo/bin` no `PATH` da sessão.
+
+O comando de empacotamento mudou porque o worker agora também usa `OCP` (telhado/pilares/cinta, ver [decisão 0008](../04-decisoes/0008-telhado-por-interseccao-de-planos.md)), que carrega DLLs nativas do VTK por linkagem binária sem importar o pacote Python `vtk` -- mesmo problema já investigado e resolvido em [roof-ocp.README.md](roof-ocp.README.md#peso-do-pacote--investigado-e-parcialmente-resolvido). Comando final, em `experiments/desktop-sidecar`:
+
+```
+python -m pip install --target .venv-libs ifcopenshell numpy pyinstaller cadquery-ocp
+PYTHONPATH=.venv-libs python -m PyInstaller --onefile --name brabim-engine --paths .venv-libs \
+  --collect-all ifcopenshell --collect-all OCP \
+  --exclude-module matplotlib --exclude-module vtkmodules \
+  --add-binary ".venv-libs/vtk.libs;vtk.libs" worker.py
+```
+
+Sem `--exclude-module`/`--add-binary`, o executável sobe e falha na primeira linha (`OCP/__init__.py` levanta `FileNotFoundError` procurando `vtk.libs` num diretório temporário do PyInstaller que não existe, porque `--collect-all OCP` não pega a pasta `vtk.libs`, que é um pacote irmão, não um submódulo de `OCP`). Com o comando acima, o executável sobe e responde corretamente (telhado + pilares + cinta juntos, ~0,27 s por recálculo) em **250 MB**, o mesmo tamanho já medido no experimento isolado.
+
+Copiado para `prototipo/src-tauri/binaries/brabim-engine-x86_64-pc-windows-msvc.exe` (convenção de nome de sidecar do Tauri: sufixo do target triple; pasta agora no `.gitignore` do `src-tauri`, artefato de build de ~250 MB não pertence ao git) e então `npx tauri build` (rodado de dentro de `prototipo`, com `~/.cargo/bin` no `PATH`) compilou e empacotou de ponta a ponta pela primeira vez: ~6 min de compilação Rust (primeira vez; incremental depois), gerando `src-tauri/target/release/app.exe` (107 MB) e dois instaladores em `src-tauri/target/release/bundle/`: `msi/brabim_0.1.0_x64_en-US.msi` (346 MB) e `nsis/brabim_0.1.0_x64-setup.exe` (345 MB, o mais direto para instalar num Windows comum).
+
+Testado de verdade: rodar `app.exe` diretamente abre a janela do BRABIM e, com "Motor real (IFC)" ligado por padrão, o app já sobe sozinho um processo `brabim-engine.exe` (confirmado via `tasklist`) -- a ponte sidecar funciona no app compilado de verdade, não só via `subprocess` de teste em Python. Não testado: instalação de fato via o `.msi`/`setup.exe` (só o `app.exe` cru), Windows sem WebView2 pré-instalado, e macOS/Linux (`externalBin` do Tauri exige um binário por plataforma-alvo, cada um com sua própria etapa de empacotamento do lado Python).
