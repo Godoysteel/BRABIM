@@ -46,6 +46,12 @@ O `worker.py` passou a gerar também a estrutura de concreto do ambiente ativo: 
 
 Testado isoladamente via `worker.py` (sem app Tauri disponível neste ambiente): pilares e vigas nascem exatamente encostados nos cantos, sem vão nem sobreposição, e a ferragem cai nas posições esperadas. Ligar "Estrutura" sozinho é rápido (~0,2 s); ligar "Estrutura" **e** "Armação" juntos sobe para ~4 s por recálculo num ambiente padrão, porque cada barra/estribo é uma entidade IFC própria (mais de 200 nesse caso) e o motor remalha cada uma duas vezes (uma para gravar a representação IFC, outra ao reler para a viewport — custo já existente no arquivo, só mais visível com mais entidades). Não há trava de desempenho para esse combo hoje; se incomodar no uso real, a otimização mais direta é parar de reler via `ifcopenshell.geom.create_shape` para formas que o próprio worker já triangulou.
 
+### Pilares intermediários (10/09/2026)
+
+Os 4 cantos continuam automáticos, mas cada parede (P01-P04) agora aceita pilares extras num ponto qualquer do seu próprio vão — mesma convenção de distância que porta/janela já usam (distância a partir do início da parede). `structure.extraColumns` no pedido ao motor é um dicionário parede → lista de distâncias; `worker.py` converte cada uma em ponto do mundo (`_wall_point`) e junta esses pilares aos 4 de canto numa única lista antes de gerar caixa, malha e ferragem — o mesmo código dos cantos serve para os dois casos. O corte booleano da cinta contra os pilares (já existente) generalizou de graça: a viga é recortada contra a união de *todos* os pilares que ela cruza, não só os dois das pontas, então um pilar no meio do vão também abre um vão limpo na viga sem precisar de código novo.
+
+Na interface, com "Estrutura" ligada e uma parede selecionada, o painel de propriedades ganhou uma seção "Pilares intermediários": um "+ Pilar nesta parede" adiciona um no meio do vão (campo numérico de distância editável, sem arrastar ainda — diferente de porta/janela), e cada um tem seu próprio "×" para remover. Não é salvo no arquivo do projeto ainda (mesma limitação de telhado/armação/estrutura em si). Não há como remover um pilar de canto especificamente nesta versão — só ligar/desligar os 4 juntos pelo botão "Estrutura".
+
 ## Validação prevista
 
 | Caso | Evidência necessária |

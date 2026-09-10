@@ -1,6 +1,6 @@
 import type {IfcMesh} from '@/app/viewport';
 import type {Room} from '@/lib/room';
-import type {WallLayers} from '@/lib/house';
+import type {WallLayers,WallId} from '@/lib/house';
 
 // Talks to the IfcOpenShell sidecar (see experiments/desktop-sidecar,
 // experiments/tauri-sidecar). Only available inside the Tauri desktop app;
@@ -9,7 +9,7 @@ import type {WallLayers} from '@/lib/house';
 export type EngineRoomParams = Pick<Room,'width'|'depth'|'height'|'thickness'|'doorWidth'|'doorHeight'|'doorOffset'|'windowWidth'|'windowHeight'|'windowOffset'|'sill'>;
 export type EngineRoofParams = {slope: number; slopedEdges: ('north'|'south'|'east'|'west')[]};
 export type EngineRebarParams = {longitudinal: {diameter: number; count: number}; stirrup: {diameter: number; spacing: number}};
-export type EngineStructureParams = {columnSize: number; beamHeight: number};
+export type EngineStructureParams = {columnSize: number; beamHeight: number; extraColumns?: Partial<Record<WallId, number[]>>};
 
 type Pending = {resolve: (meshes: IfcMesh[]) => void; reject: (error: Error) => void};
 

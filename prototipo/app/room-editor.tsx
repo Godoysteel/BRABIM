@@ -31,6 +31,12 @@ export default function RoomEditor(){
   const [structureOn,setStructureOn]=useState(false);
   const [columnSize,setColumnSize]=useState(.2);
   const [beamHeight,setBeamHeight]=useState(.2);
+  // Extra (intermediate) columns along a wall, on top of the 4 automatic
+  // corners -- keyed by room id like engineMeshes, since the real engine
+  // only ever computes the active room. Not part of House/serializeHouse
+  // yet (same limitation as roof/rebar/structure itself: real-engine-only
+  // options don't survive save/reload today).
+  const [extraColumns,setExtraColumns]=useState<Record<string,Partial<Record<WallId,number[]>>>>({});
   const roofEdgesByType:Record<typeof roofType,('north'|'south'|'east'|'west')[]>={quatro:['north','south','east','west'],'duas-ns':['north','south'],'duas-leo':['east','west']};
   const meshes=useMemo(()=>houseMeshes(house),[house]);
   const layout=useMemo(()=>layoutHouse(house),[house]);
@@ -46,7 +52,8 @@ export default function RoomEditor(){
       const nonEmpty=Object.fromEntries(Object.entries(current.wallLayers??{}).filter(([,list])=>list&&list.length>0));
       const wallLayers=Object.keys(nonEmpty).length?nonEmpty:undefined;
       const rebar=rebarOn?{longitudinal:{diameter:rebarCatalog.find(r=>r.id===rebarSpec.longitudinal)!.diameter,count:rebarSpec.longitudinalCount},stirrup:{diameter:rebarCatalog.find(r=>r.id===rebarSpec.stirrup)!.diameter,spacing:rebarSpec.stirrupSpacing}}:undefined;
-      const structure=structureOn?{columnSize,beamHeight}:undefined;
+      const nonEmptyColumns=Object.fromEntries(Object.entries(extraColumns[roomId]??{}).filter(([,list])=>list&&list.length>0));
+      const structure=structureOn?{columnSize,beamHeight,extraColumns:Object.keys(nonEmptyColumns).length?nonEmptyColumns:undefined}:undefined;
       computeRoomMeshes({width,depth,height,thickness,doorWidth,doorHeight,doorOffset,windowWidth,windowHeight,windowOffset,sill},roof,wallLayers,contravergaOn,rebar,structure).then(result=>{
         const shifted=result.map(m=>({...m,vertices:m.vertices.map(([x,y,z])=>[x+entry.center,y,z])}));
         setEngineMeshes(prev=>({...prev,[roomId]:shifted}));
@@ -54,7 +61,7 @@ export default function RoomEditor(){
       }).catch(e=>setEngineStatus('Erro no motor: '+(e as Error).message));
     },250);
     return ()=>clearTimeout(timer);
-  },[engineOn,roofOn,roofType,contravergaOn,rebarOn,rebarSpec,structureOn,columnSize,beamHeight,current.id,current.wallLayers,room.width,room.depth,room.height,room.thickness,room.doorWidth,room.doorHeight,room.doorOffset,room.windowWidth,room.windowHeight,room.windowOffset,room.sill,layout]);
+  },[engineOn,roofOn,roofType,contravergaOn,rebarOn,rebarSpec,structureOn,columnSize,beamHeight,extraColumns,current.id,current.wallLayers,room.width,room.depth,room.height,room.thickness,room.doorWidth,room.doorHeight,room.doorOffset,room.windowWidth,room.windowHeight,room.windowOffset,room.sill,layout]);
   const displayMeshes=useMemo(()=>{
     if(!engineOn||!Object.keys(engineMeshes).length)return meshes;
     const engineIds=new Set(Object.keys(engineMeshes).flatMap(roomId=>['P01','P02','P03','P04','D01','J01'].map(w=>`${roomId}:${w}`)));
@@ -65,6 +72,12 @@ export default function RoomEditor(){
   const wallIds:WallId[]=['P01','P02','P03','P04'];
   const isWallSelected=isEngineAvailable()&&engineOn&&selRoomId===current.id&&(wallIds as string[]).includes(selPart);
   const selectedLayers=isWallSelected?(current.wallLayers?.[selPart as WallId]??[]):[];
+  const selectedColumns=isWallSelected?(extraColumns[current.id]?.[selPart as WallId]??[]):[];
+  function wallLength(wallId:WallId){return wallId==='P01'||wallId==='P02'?room.width:room.depth;}
+  function setColumnsFor(wallId:WallId,list:number[]){setExtraColumns(prev=>({...prev,[current.id]:{...(prev[current.id]??{}),[wallId]:list}}));}
+  function addColumn(){const wallId=selPart as WallId,length=wallLength(wallId);setColumnsFor(wallId,[...selectedColumns,Math.round(length/2*100)/100]);setMessage('Pilar adicionado no meio da parede. Ajuste a distância pelo campo.');}
+  function updateColumn(i:number,value:number){setColumnsFor(selPart as WallId,selectedColumns.map((v,idx)=>idx===i?value:v));}
+  function removeColumn(i:number){setColumnsFor(selPart as WallId,selectedColumns.filter((_,idx)=>idx!==i));setMessage('Pilar removido.');}
   function setWallLayers(list:WallLayer[]){try{const next=updateWallLayers(house,current.id,selPart as WallId,list);setHistory(h=>[...h.slice(-49),house]);setHouse(next);setMessage('Camadas da parede atualizadas.');}catch(e){setMessage((e as Error).message);}}
   function addLayer(){setWallLayers([...selectedLayers,{material:'Novo material',thickness:.1}]);}
   function addBrickLayer(brick:typeof brickCatalog[number]){setWallLayers([...selectedLayers,{material:brick.name,thickness:brick.width}]);}
@@ -78,7 +91,7 @@ export default function RoomEditor(){
   function restore(){try{const text=localStorage.getItem('brabim-house-v1')??localStorage.getItem('brabim-room-v1');if(!text)throw Error('Nenhum projeto salvo neste navegador.');apply(()=>parseHouse(text));setReset(v=>v+1);}catch(e){setMessage((e as Error).message);}}
   function download(){const url=URL.createObjectURL(new Blob([serializeHouse(house)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='projeto.brabim.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setMessage('Arquivo do projeto preparado para download.');}
   function downloadDebug(){
-    const payload={geradoEm:new Date().toISOString(),cômodoAtivo:current.id,motorReal:engineOn,telhado:roofOn?roofType:false,estrutura:structureOn?{columnSize,beamHeight}:false,camadasDeParede:current.wallLayers,parâmetrosDoCômodo:room,malhasExibidas:displayMeshes};
+    const payload={geradoEm:new Date().toISOString(),cômodoAtivo:current.id,motorReal:engineOn,telhado:roofOn?roofType:false,estrutura:structureOn?{columnSize,beamHeight,pilaresIntermediarios:extraColumns[current.id]}:false,camadasDeParede:current.wallLayers,parâmetrosDoCômodo:room,malhasExibidas:displayMeshes};
     const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
     const a=document.createElement('a');a.href=url;a.download='brabim-depuracao.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
     setMessage('Dados de depuração exportados (vértices/faces reais na tela).');
@@ -205,8 +218,17 @@ export default function RoomEditor(){
             </button>)}
           </div>
         </section>
+        {structureOn&&<section>
+          <h3>Pilares intermediários</h3>
+          {selectedColumns.map((offset,i)=><div key={i} className="layer-row">
+            <input type="number" step="0.05" min={0} max={wallLength(selPart as WallId)} value={offset} onChange={e=>updateColumn(i,Number(e.target.value))} aria-label={`Distância do pilar ${i+1} até o início da parede (m)`}/>
+            <button onClick={()=>removeColumn(i)} title="Remover pilar">×</button>
+          </div>)}
+          <button onClick={addColumn} style={{marginTop:'8px'}}>+ Pilar nesta parede</button>
+          <p className="hint">Distância do início da parede, mesmo referencial de porta/janela. Os 4 pilares de canto são automáticos e não aparecem aqui.</p>
+        </section>}
         <section><h3>Material estrutural</h3><label style={{opacity:.4}}><span>Resistência</span><Lock size={13}/></label></section>
-      </>:<div className="empty-inspector">{isEngineAvailable()?'Selecione uma parede (P01-P04) para editar as camadas.':'Ligue o motor real (IFC) para editar camadas de parede.'}</div>}
+      </>:<div className="empty-inspector">{isEngineAvailable()?'Selecione uma parede (P01-P04) para editar as camadas e pilares.':'Ligue o motor real (IFC) para editar camadas de parede.'}</div>}
     </aside>
     </div>
     <footer><span role="status">{message}</span><span className="footer-right">{pickHistory[0]?`Último clique: x=${pickHistory[0][0].toFixed(3)} y=${pickHistory[0][1].toFixed(3)} z(altura)=${pickHistory[0][2].toFixed(3)}`:'Geometria demonstrativa · sem recálculo IFC'}</span></footer>

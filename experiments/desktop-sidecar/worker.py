@@ -280,6 +280,18 @@ def _lintel_extents(axis_origin, along_offset, width, z0, z1, wall_thickness, be
     return x0, x1, y0, y1, z0, z1
 
 
+def _wall_point(a, b, offset):
+    """World position at `offset` metres from `a` towards `b` -- same
+    along-the-wall convention as door/window (offset from the wall's
+    start point), used to place an intermediate column at a user-chosen
+    point along a wall instead of only at its two corners.
+    """
+    ax, ay = a; bx, by = b
+    length = ((bx - ax) ** 2 + (by - ay) ** 2) ** 0.5
+    t = offset / length
+    return ax + (bx - ax) * t, ay + (by - ay) * t
+
+
 def _tie_beam_extents(a, b, thickness, z0, z1):
     """Axis-aligned extents for one wall's tie beam (the 'cinta' at the
     top of the wall, see build_room's `structure` block) -- same
@@ -615,13 +627,26 @@ def build_room(width, depth, height, thickness, door=None, window=None, roof=Non
     if structure:
         col_size = structure.get('columnSize', t)
         beam_height = structure.get('beamHeight', .2)
+        # Every corner always gets a column (a real house needs one at
+        # every wall intersection); `extraColumns` adds user-placed
+        # intermediate ones along a specific wall's own span (offset from
+        # that wall's start point, same convention as door/window), for a
+        # long wall that needs a mid-span support the 4 automatic corners
+        # don't cover. Both kinds share the same box/rebar code below,
+        # driven off one combined `column_specs` list.
         corners = [('NO', -w/2, d/2), ('NE', w/2, d/2), ('SO', -w/2, -d/2), ('SE', w/2, -d/2)]
+        column_specs = [(f'PILAR-{name}', cx, cy) for name, cx, cy in corners]
+        for i, (a, b) in enumerate(base):
+            name = f'P{i+1:02}'
+            for idx, offset in enumerate(structure.get('extraColumns', {}).get(name, [])):
+                cx, cy = _wall_point(a, b, offset)
+                column_specs.append((f'PILAR-{name}-{idx+1}', cx, cy))
         column_boxes = []
-        for name, cx, cy in corners:
+        for label, cx, cy in column_specs:
             box = BRepPrimAPI_MakeBox(gp_Pnt(cx - col_size/2, cy - col_size/2, 0), gp_Pnt(cx + col_size/2, cy + col_size/2, h)).Shape()
             column_boxes.append(box)
             vertices, faces = _triangulate_occt(box)
-            col = api.run('root.create_entity', f, ifc_class='IfcColumn', name=f'PILAR-{name}')
+            col = api.run('root.create_entity', f, ifc_class='IfcColumn', name=label)
             api.run('spatial.assign_container', f, products=[col], relating_structure=storey)
             rep = api.run('geometry.add_mesh_representation', f, context=body, vertices=[vertices], faces=[faces])
             api.run('geometry.assign_representation', f, product=col, representation=rep)
@@ -631,7 +656,7 @@ def build_room(width, depth, height, thickness, door=None, window=None, roof=Non
                 long_diam, long_count = rebar['longitudinal']
                 stirrup_diam, spacing = rebar['stirrup']
                 longitudinal, stirrups = _reinforce_column(cx - col_size/2, cx + col_size/2, cy - col_size/2, cy + col_size/2, 0, h, long_diam, long_count, stirrup_diam, spacing)
-                structure_entities.extend(add_reinforcement(f, body, storey, f'PILAR-{name}', longitudinal, stirrups))
+                structure_entities.extend(add_reinforcement(f, body, storey, label, longitudinal, stirrups))
         columns_fused = column_boxes[0]
         for b in column_boxes[1:]:
             columns_fused = BRepAlgoAPI_Fuse(columns_fused, b).Shape()
@@ -735,7 +760,7 @@ def main():
                 layers={name: [(l['material'], float(l['thickness'])) for l in wl] for name, wl in req['wallLayers'].items()} if req.get('wallLayers') else None,
                 contraverga=bool(req.get('contraverga', False)),
                 rebar={'longitudinal': (float(req['rebar']['longitudinal']['diameter']), int(req['rebar']['longitudinal']['count'])), 'stirrup': (float(req['rebar']['stirrup']['diameter']), float(req['rebar']['stirrup']['spacing']))} if req.get('rebar') else None,
-                structure={'columnSize': float(req['structure']['columnSize']), 'beamHeight': float(req['structure']['beamHeight'])} if req.get('structure') else None,
+                structure={'columnSize': float(req['structure']['columnSize']), 'beamHeight': float(req['structure']['beamHeight']), 'extraColumns': {name: [float(o) for o in offsets] for name, offsets in (req['structure'].get('extraColumns') or {}).items()}} if req.get('structure') else None,
             )
             print(json.dumps({'type': 'result', 'id': req.get('id'), 'elapsed_seconds': round(time.perf_counter() - t0, 3), 'meshes': meshes}), flush=True)
         except Exception as e:

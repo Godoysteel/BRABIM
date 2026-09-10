@@ -23,7 +23,7 @@ Referência: `main`, commit `c5fbe7b`. Este roteiro foi originalmente escrito em
 | Cobertura | Duas/quatro águas e ajuste do topo das paredes | Parâmetros editáveis e contornos gerais |
 | Paredes em camadas | Implementadas | Espessura única coerente entre camadas, encontros, layout e cobertura |
 | Vergas, contravergas e armadura | Geometria implementada | Robustez, persistência e detalhamento; não representa dimensionamento |
-| Pilares e cinta | Implementados (4 cantos fixos + viga no topo de cada parede), com armação real opcional | Pilares intermediários/removíveis ao longo da parede, validar encontros, aberturas altas, cobertura e salvamento |
+| Pilares e cinta | Implementados: 4 cantos fixos + pilares intermediários editáveis por parede (distância numérica, sem arrastar) + viga no topo de cada parede, com armação real opcional | Remover um pilar de canto especificamente, arrastar em vez de campo numérico, validar encontros, aberturas altas, cobertura e salvamento |
 | Materiais e texturas | Catálogo visual e mapas PBR | Propriedades técnicas com origem e escala de textura definida |
 | Arquivo de projeto | JSON com ambientes e camadas | Incluir telhado, cinta, pilares, armaduras e demais opções hoje fora de `House` |
 | Vistas | Planta, 3D e corte visual de inspeção | Cortes documentais, fachadas, cotas, pranchas e tabelas |
