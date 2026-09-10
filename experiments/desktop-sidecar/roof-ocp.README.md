@@ -24,14 +24,22 @@ ifcopenshell still usable: <ifcopenshell.file.file object at ...>
 
 Os volumes batem **exatamente** com os já calculados no experimento em JavaScript/WASM — duas implementações independentes do OCCT (embind/WASM vs pybind11/nativo) chegando ao mesmo resultado. `ifcopenshell` funcionou normalmente antes, depois e importado em qualquer ordem com o OCP, sem erro. O tempo total (0,18s) é bem menor que a versão WASM (~550ms), consistente com não ter o custo de carregar um runtime WebAssembly.
 
-## Ponto de atenção: peso do pacote
+## Peso do pacote — investigado e parcialmente resolvido
 
-`cadquery-ocp` sozinho ocupa ~109 MB, mas a instalação padrão via pip também traz **VTK (~314 MB) e matplotlib (~33 MB)** como dependências — aparentemente usados só por um recurso de visualização (`cadquery-ocp-proxy`) que não precisamos, já que o BRABIM não usa essas bibliotecas para desenhar nada. Se este caminho for adotado, vale investigar como excluir VTK/matplotlib do executável final (via `--exclude-module` do PyInstaller, ou uma forma de instalar só o núcleo do OCP sem o proxy) antes de assumir esses ~350 MB extras no instalador.
+`cadquery-ocp` sozinho ocupa ~109 MB; a instalação padrão via pip também traz VTK (~314 MB: ~264 MB de DLLs nativas + ~50 MB de pacote Python) e matplotlib (~33 MB) como dependências declaradas.
+
+Investigação mostrou que **o pacote Python do VTK e o matplotlib não são realmente necessários** — o próprio `OCP/__init__.py` só precisa que a pasta `vtk.libs` (as DLLs nativas, ~264 MB) exista no disco, porque o binário compilado do OCP está linkado contra elas; ele nunca importa o pacote `vtk` do Python nem o `matplotlib` em si (isso deve vir só de algum recurso auxiliar do `cadquery-ocp-proxy`, não usado aqui). Testado com sucesso:
+
+1. `pip install --no-deps cadquery-ocp cadquery-ocp-proxy` (evita baixar VTK/matplotlib automaticamente).
+2. Copiar manualmente a pasta `vtk.libs` (gerada por uma instalação completa do pacote `vtk`) para junto do OCP.
+3. Congelar com PyInstaller passando `--exclude-module matplotlib --exclude-module vtkmodules` e `--add-binary ".../vtk.libs;vtk.libs"`.
+
+Resultado: o executável final ficou em **250 MB** (IfcOpenShell + OCP + as DLLs do VTK, sem o pacote Python do VTK nem matplotlib) — abaixo do que seria com tudo incluído, mas ainda bem mais pesado que os 71 MB de antes de somar o OCCT, porque as DLLs nativas do VTK continuam sendo a maior parte do peso e não têm como ser removidas enquanto o OCP depender delas no nível binário. Testado e funcionando: o executável rodou corretamente, com os mesmos volumes certos e o IfcOpenShell funcionando.
 
 ## Conclusão
 
-A pergunta em aberto ("como o OCCT e o IfcOpenShell se encaixam no mesmo motor?") está respondida: rodam juntos, no mesmo processo Python, sem conflito, com resultado numericamente idêntico ao já validado em JS. O próximo passo (não feito aqui) é converter o sólido calculado pelo OCP em entidades IFC reais (`IfcRoof`) dentro do arquivo que o `ifcopenshell` já está montando — provavelmente triangulando o sólido do OCP e construindo a representação a partir dos vértices/faces, já que não há uma ponte direta documentada entre um `TopoDS_Shape` do OCCT e uma entidade IFC.
+A pergunta em aberto ("como o OCCT e o IfcOpenShell se encaixam no mesmo motor?") está respondida: rodam juntos, no mesmo processo Python, sem conflito, com resultado numericamente idêntico ao já validado em JS — inclusive já empacotados juntos num executável de teste. O peso do instalador sobe de ~71 MB para ~250 MB ao somar o telhado; matplotlib e o pacote Python do VTK foram eliminados, mas as DLLs nativas do VTK (~264 MB) são um custo fixo enquanto usarmos o `cadquery-ocp`. O próximo passo (não feito aqui) é converter o sólido calculado pelo OCP em entidades IFC reais (`IfcRoof`) dentro do arquivo que o `ifcopenshell` já está montando — provavelmente triangulando o sólido do OCP e construindo a representação a partir dos vértices/faces, já que não há uma ponte direta documentada entre um `TopoDS_Shape` do OCCT e uma entidade IFC.
 
 ## Limites deste teste
 
-Não testado: conversão do sólido OCP em entidade IFC de verdade, tamanho do executável final com essa dependência extra, e se dá pra remover VTK/matplotlib sem quebrar o `cadquery-ocp`. Mesma ressalva do teste em JS quanto a contornos não retangulares e águas com inclinações diferentes entre si.
+Não testado: conversão do sólido OCP em entidade IFC de verdade, e se existe uma forma de conseguir as DLLs do VTK sem precisar instalar o pacote `vtk` completo uma vez só para extraí-las (hoje depende de ter instalado `vtk` em algum momento para gerar essa pasta). Mesma ressalva do teste em JS quanto a contornos não retangulares e águas com inclinações diferentes entre si.
