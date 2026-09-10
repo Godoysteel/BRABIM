@@ -99,7 +99,50 @@ def build_roof(f, body, storey, width, depth, eave_height, slope, sloped_edges, 
     rep = api.run('geometry.add_mesh_representation', f, context=body, vertices=[vertices], faces=[faces])
     api.run('geometry.assign_representation', f, product=roof, representation=rep)
     api.run('geometry.edit_object_placement', f, product=roof)
-    return roof
+    return roof, inner
+
+
+def _wall_cap(inner, a, b, thickness, eave_height, tall_top):
+    """The part of one wall's own footprint that sits between eave_height
+    and the roof's underside (`inner`). Axis-aligned only, like the rest
+    of build_room: tells apart a north/south run from an east/west run by
+    which endpoint coordinate stays constant, then extends half a
+    thickness past each end so neighbouring walls' caps overlap at the
+    corner instead of leaving a sliver gap there.
+    """
+    ax, ay = a; bx, by = b
+    if ax == bx:  # runs north-south (an east/west wall): thin in x, spans y
+        y0, y1 = sorted((ay, by))
+        pmin = gp_Pnt(ax - thickness / 2, y0 - thickness / 2, eave_height)
+        pmax = gp_Pnt(ax + thickness / 2, y1 + thickness / 2, tall_top)
+    else:  # runs east-west (a north/south wall): thin in y, spans x
+        x0, x1 = sorted((ax, bx))
+        pmin = gp_Pnt(x0 - thickness / 2, ay - thickness / 2, eave_height)
+        pmax = gp_Pnt(x1 + thickness / 2, ay + thickness / 2, tall_top)
+    box = BRepPrimAPI_MakeBox(pmin, pmax).Shape()
+    return BRepAlgoAPI_Common(box, inner).Shape()
+
+
+def attach_wall_to_roof(f, body, storey, name, inner, a, b, thickness, eave_height, tall_top):
+    """Revit-style 'Attach Top/Base': instead of a special gable panel
+    for two-water roofs, every wall's flat top gets reshaped to follow
+    whatever roof sits above it -- a sloped edge picks up only the thin
+    sliver across its own thickness (the roof plane rises slightly
+    behind the eave line), an unsloped (gable) edge picks up the full
+    triangular void up to the ridge. One mechanism, any roof shape.
+    Returns None when the wall needs no cap (edge already flush the
+    whole way, e.g. a hip hidden entirely under the eave line).
+    """
+    cap = _wall_cap(inner, a, b, thickness, eave_height, tall_top)
+    vertices, faces = _triangulate_occt(cap)
+    if not vertices:
+        return None
+    wall = api.run('root.create_entity', f, ifc_class='IfcWall', name=f'{name}-EMP')
+    api.run('spatial.assign_container', f, products=[wall], relating_structure=storey)
+    rep = api.run('geometry.add_mesh_representation', f, context=body, vertices=[vertices], faces=[faces])
+    api.run('geometry.assign_representation', f, product=wall, representation=rep)
+    api.run('geometry.edit_object_placement', f, product=wall)
+    return wall
 
 def add_opening(f, body, wall, axis_origin, along_offset, width, height, sill, wall_thickness):
     """Cuts a void into `wall` at `along_offset` (distance from the wall's
@@ -170,7 +213,7 @@ def build_room(width, depth, height, thickness, door=None, window=None, roof=Non
     if window:
         add_opening(f, body, walls[0], base[0][0], window['offset'], window['width'], window['height'], window['sill'], t)
 
-    roof_entity = None
+    roof_entity, cap_entities = None, []
     if roof:
         # width/depth are the room's *internal* clear dimensions; the wall's
         # actual outer face sits half a wall-thickness further out. The
@@ -179,7 +222,16 @@ def build_room(width, depth, height, thickness, door=None, window=None, roof=Non
         # otherwise the wall corner sits inside the droop zone instead of
         # at its start (confirmed via the debug panel: corner fell 0.1m,
         # half the wall thickness, into the overhang before this fix).
-        roof_entity = build_roof(f, body, storey, w + t, d + t, h, roof['slope'], roof['slopedEdges'], roof.get('overhang', 0.5))
+        roof_entity, inner = build_roof(f, body, storey, w + t, d + t, h, roof['slope'], roof['slopedEdges'], roof.get('overhang', 0.5))
+        # Attach every wall's top to the roof's underside (see
+        # attach_wall_to_roof): the same mechanism closes the gable
+        # triangle on an unsloped edge and trims the tiny sliver a
+        # sloped edge picks up across its own thickness.
+        tall_top = h + max(w, d) + t
+        for i, (a, b) in enumerate(base):
+            cap = attach_wall_to_roof(f, body, storey, f'P{i+1:02}', inner, a, b, t, h, tall_top)
+            if cap:
+                cap_entities.append(cap)
 
     settings = ifcopenshell.geom.settings(); settings.set(settings.USE_WORLD_COORDS, True)
     meshes = []
@@ -193,6 +245,11 @@ def build_room(width, depth, height, thickness, door=None, window=None, roof=Non
         v = np.array(shape.geometry.verts).reshape(-1, 3)
         faces = np.array(shape.geometry.faces).reshape(-1, 3)
         meshes.append({'id': 'TELHADO', 'guid': roof_entity.GlobalId, 'vertices': v.tolist(), 'faces': faces.tolist()})
+    for cap in cap_entities:
+        shape = ifcopenshell.geom.create_shape(settings, cap)
+        v = np.array(shape.geometry.verts).reshape(-1, 3)
+        faces = np.array(shape.geometry.faces).reshape(-1, 3)
+        meshes.append({'id': cap.Name, 'guid': cap.GlobalId, 'vertices': v.tolist(), 'faces': faces.tolist()})
     return meshes
 
 def main():

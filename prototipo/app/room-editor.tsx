@@ -19,6 +19,8 @@ export default function RoomEditor(){
   const dragRef=useRef<{roomId:string;key:'doorOffset'|'windowOffset';width:number}|null>(null);
   const [engineOn,setEngineOn]=useState(false),[engineStatus,setEngineStatus]=useState(''),[engineMeshes,setEngineMeshes]=useState<Record<string,IfcMesh[]>>({});
   const [roofOn,setRoofOn]=useState(false);
+  const [roofType,setRoofType]=useState<'quatro'|'duas-ns'|'duas-leo'>('quatro');
+  const roofEdgesByType:Record<typeof roofType,('north'|'south'|'east'|'west')[]>={quatro:['north','south','east','west'],'duas-ns':['north','south'],'duas-leo':['east','west']};
   const meshes=useMemo(()=>houseMeshes(house),[house]);
   const layout=useMemo(()=>layoutHouse(house),[house]);
   const current=house.rooms.find(e=>e.id===active)??house.rooms[0];
@@ -29,7 +31,7 @@ export default function RoomEditor(){
     const {width,depth,height,thickness,doorWidth,doorHeight,doorOffset,windowWidth,windowHeight,windowOffset,sill}=room;
     setEngineStatus('Calculando no motor IFC...');
     const timer=setTimeout(()=>{
-      const roof=roofOn?{slope:.6,slopedEdges:['north','south','east','west'] as ('north'|'south'|'east'|'west')[]}:undefined;
+      const roof=roofOn?{slope:.6,slopedEdges:roofEdgesByType[roofType]}:undefined;
       computeRoomMeshes({width,depth,height,thickness,doorWidth,doorHeight,doorOffset,windowWidth,windowHeight,windowOffset,sill},roof).then(result=>{
         const shifted=result.map(m=>({...m,vertices:m.vertices.map(([x,y,z])=>[x+entry.center,y,z])}));
         setEngineMeshes(prev=>({...prev,[roomId]:shifted}));
@@ -37,7 +39,7 @@ export default function RoomEditor(){
       }).catch(e=>setEngineStatus('Erro no motor: '+(e as Error).message));
     },250);
     return ()=>clearTimeout(timer);
-  },[engineOn,roofOn,current.id,room.width,room.depth,room.height,room.thickness,room.doorWidth,room.doorHeight,room.doorOffset,room.windowWidth,room.windowHeight,room.windowOffset,room.sill,layout]);
+  },[engineOn,roofOn,roofType,current.id,room.width,room.depth,room.height,room.thickness,room.doorWidth,room.doorHeight,room.doorOffset,room.windowWidth,room.windowHeight,room.windowOffset,room.sill,layout]);
   const displayMeshes=useMemo(()=>{
     if(!engineOn||!Object.keys(engineMeshes).length)return meshes;
     const engineIds=new Set(Object.keys(engineMeshes).flatMap(roomId=>['P01','P02','P03','P04','D01','J01'].map(w=>`${roomId}:${w}`)));
@@ -52,7 +54,7 @@ export default function RoomEditor(){
   function restore(){try{const text=localStorage.getItem('brabim-house-v1')??localStorage.getItem('brabim-room-v1');if(!text)throw Error('Nenhum projeto salvo neste navegador.');apply(()=>parseHouse(text));setReset(v=>v+1);}catch(e){setMessage((e as Error).message);}}
   function download(){const url=URL.createObjectURL(new Blob([serializeHouse(house)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='projeto.brabim.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setMessage('Arquivo do projeto preparado para download.');}
   function downloadDebug(){
-    const payload={geradoEm:new Date().toISOString(),cômodoAtivo:current.id,motorReal:engineOn,telhado:roofOn,parâmetrosDoCômodo:room,malhasExibidas:displayMeshes};
+    const payload={geradoEm:new Date().toISOString(),cômodoAtivo:current.id,motorReal:engineOn,telhado:roofOn?roofType:false,parâmetrosDoCômodo:room,malhasExibidas:displayMeshes};
     const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
     const a=document.createElement('a');a.href=url;a.download='brabim-depuracao.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
     setMessage('Dados de depuração exportados (vértices/faces reais na tela).');
@@ -67,7 +69,12 @@ export default function RoomEditor(){
       <button disabled={!history.length} onClick={()=>{const previous=history.at(-1)!;setHouse(previous);setActive(previous.rooms[0].id);select(`${previous.rooms[0].id}:F01`);setHistory(h=>h.slice(0,-1));setReset(v=>v+1);setMessage('Última alteração desfeita.');}}>Desfazer</button><button onClick={()=>setReset(v=>v+1)}>Enquadrar 3D</button>
       <input ref={input} hidden type="file" accept=".json" onChange={async e=>{const file=e.target.files?.[0];if(file)try{if(file.size>100000)throw Error('Arquivo muito grande.');const text=await file.text();apply(()=>parseHouse(text));setReset(v=>v+1);}catch(error){setMessage((error as Error).message);}e.target.value='';}}/>
       {isEngineAvailable()&&<label style={{display:'flex',alignItems:'center',gap:'.4em',marginLeft:'auto'}}><input type="checkbox" checked={engineOn} onChange={e=>{setEngineOn(e.target.checked);if(!e.target.checked)setEngineStatus('');}}/>Motor real (IFC) · {current.name}{engineStatus?` · ${engineStatus}`:''}</label>}
-      {isEngineAvailable()&&engineOn&&<label style={{display:'flex',alignItems:'center',gap:'.4em'}}><input type="checkbox" checked={roofOn} onChange={e=>setRoofOn(e.target.checked)}/>Telhado (4 águas)</label>}
+      {isEngineAvailable()&&engineOn&&<label style={{display:'flex',alignItems:'center',gap:'.4em'}}><input type="checkbox" checked={roofOn} onChange={e=>setRoofOn(e.target.checked)}/>Telhado</label>}
+      {isEngineAvailable()&&engineOn&&roofOn&&<select value={roofType} onChange={e=>setRoofType(e.target.value as typeof roofType)}>
+        <option value="quatro">Quatro águas</option>
+        <option value="duas-ns">Duas águas (cumeeira leste-oeste)</option>
+        <option value="duas-leo">Duas águas (cumeeira norte-sul)</option>
+      </select>}
       <button onClick={()=>setDebugOpen(v=>!v)} style={{marginLeft:isEngineAvailable()?undefined:'auto'}}>{debugOpen?'Fechar ferramentas':'Ferramentas de depuração'}</button>
     </div>
     {debugOpen&&<div className="tools" style={{flexWrap:'wrap',background:'#fff8ec',borderTop:'1px solid #eadfc7'}}>
