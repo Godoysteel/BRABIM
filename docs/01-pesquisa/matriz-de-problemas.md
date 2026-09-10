@@ -14,12 +14,14 @@
 | D8 | Fluxo de caixa da obra sem projeção temporal | ✓ |  |  | ? | Alto | Alto | Investigar |
 | D9 | Complexidade em projetos complementares |  | ✓ |  | ? | ? | ? | Identificar disciplinas e tarefas |
 | D10 | Necessidade de famílias de paredes adequadas à realidade brasileira |  | Sugestão |  | ? | ? | ? | Confirmar lacunas e exemplos |
+| D11 | Erros de interoperabilidade na importação/exportação entre softwares (posição, geometria, origem do projeto) |  |  | ✓ | ? | Alto | ? | Investigar |
+| D12 | Padronização manual de dados/parâmetros no início do projeto causa erros em quantitativos e taxas urbanísticas |  |  | ✓ | ? | ? | ? | Investigar |
 
 ## Regra de interpretação
 
 Um problema só será tratado como recorrente quando aparecer de forma independente em mais de uma entrevista.
 
-✓ indica menção no relato, não validação de mercado. D3 e D10 têm proximidade temática, mas não foram considerados confirmação do mesmo problema. Paulo considera o Revit pouco complexo para arquitetura, contrapondo a hipótese de complexidade generalizada. Sua sugestão de automação com IA permanece na entrevista até que a tarefa a resolver seja identificada.
+✓ indica menção no relato, não validação de mercado. D3 e D10 têm proximidade temática, mas não foram considerados confirmação do mesmo problema. Paulo considera o Revit pouco complexo para arquitetura, contrapondo a hipótese de complexidade generalizada. Sua sugestão de automação com IA permanece na entrevista até que a tarefa a resolver seja identificada. D11 e D12 (relato de Valesca, "Profissional 3") têm proximidade temática com D1/D9 e D2, respectivamente, mas descrevem problemas distintos — ver [interpretação completa na entrevista](entrevistas/entrevista-003-valesca.md).
 
 ## Próximo passo
 
@@ -32,6 +34,8 @@ Preencher as colunas dos demais profissionais sem alterar o conteúdo original d
 Fonte: [Entrevista 001 — Bruno Porto](entrevistas/entrevista-001-bruno-porto.md).
 
 Fonte: [Entrevista 002 — Paulo](entrevistas/entrevista-002-paulo.md).
+
+Fonte: [Entrevista 003 — Valesca](entrevistas/entrevista-003-valesca.md).
 
 Para cada problema, avaliar: frequência, tempo gasto, impacto, alternativa atual, disposição para pagar e recorrência entre profissionais.
 
